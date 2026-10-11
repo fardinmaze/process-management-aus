@@ -6,6 +6,8 @@
 
 const DB_KEY = 'pm_db_v1'
 const SESSION_KEY = 'pm_session_v1'
+// The signed-in user is per browser tab (sessionStorage) so two tabs can be two different people; the data is shared (localStorage).
+const sess = () => globalThis.sessionStorage ?? localStorage
 
 export class ApiError extends Error {
   constructor(code, message, data = null) { super(message); this.code = code; this.data = data }
@@ -50,11 +52,11 @@ function load() {
   return db
 }
 function save() { try { localStorage.setItem(DB_KEY, JSON.stringify(db)) } catch { fail(507, 'Browser storage is full. Use Reset demo data.') } }
-export function resetDemo() { db = seed(); save(); localStorage.removeItem(SESSION_KEY) }
+export function resetDemo() { db = seed(); save(); sess().removeItem(SESSION_KEY) }
 const nextId = (k) => ++load().seq[k]
 
 // ───────────────────────── helpers ─────────────────────────
-const sessionUserId = () => Number(localStorage.getItem(SESSION_KEY)) || null
+const sessionUserId = () => Number(sess().getItem(SESSION_KEY)) || null
 const byId = (arr, id) => arr.find((x) => x.id === Number(id))
 const publicUser = (u) => u && ({ id: u.id, name: u.name, email: u.email, roles: u.roles, dept: u.dept || null })
 const userName = (id) => byId(load().users, id)?.name || '—'
@@ -226,10 +228,10 @@ const route = (pattern, fn) => { H[pattern] = fn }
 route('auth/login', ({ email, password }) => {
   const u = load().users.find((x) => x.email.toLowerCase() === String(email || '').trim().toLowerCase() && x.password === password)
   if (!u) fail(400, 'Email or password is incorrect.')
-  localStorage.setItem(SESSION_KEY, String(u.id)); log(u, 'auth.login', 'user', u.id); save()
+  sess().setItem(SESSION_KEY, String(u.id)); log(u, 'auth.login', 'user', u.id); save()
   return publicUser(u)
 })
-route('auth/logout', () => { localStorage.removeItem(SESSION_KEY); return {} })
+route('auth/logout', () => { sess().removeItem(SESSION_KEY); return {} })
 route('auth/me', () => publicUser(me(false)))
 route('user/list', () => { const u = me(); if (!hasRole(u, 'ADMIN', 'OWNER')) fail(403, 'Not allowed.'); return load().users.map(publicUser) })
 route('user/set-roles/:pk', ({ roles }, { pk }) => {
@@ -286,7 +288,7 @@ route('invitation/accept', ({ token, name, password }) => { // public, by token
   const u = { id: nextId('user'), name: name.trim(), email: i.email, roles: [i.role], password }
   d.users.push(u); i.status = 'ACCEPTED'; i.acceptedUserId = u.id
   if (i.mapId) addToTeam(i.mapId, u.id)
-  localStorage.setItem(SESSION_KEY, String(u.id))
+  sess().setItem(SESSION_KEY, String(u.id))
   log(u, 'invitation.accepted', 'invitation', i.id, 'PENDING', 'ACCEPTED'); notify([i.invitedBy], `${u.name} accepted your invitation.`, null); save(); return publicUser(u)
 })
 
@@ -843,6 +845,7 @@ const compiled = Object.keys(H).map((p) => {
   return { rx, names, fn: H[p] }
 })
 export function dispatch(path, payload = {}) {
+  db = null // re-read the shared data on every call, so another tab's changes are never overwritten by a stale copy
   load()
   for (const r of compiled) {
     const m = r.rx.exec(path); if (!m) continue

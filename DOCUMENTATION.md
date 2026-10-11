@@ -311,7 +311,7 @@ node tests/layout-spike.mjs
 ```
 Browser test: start the dev server, install `playwright-core`, then run `node tests/e2e/browser-test.mjs`. Screenshots are saved next to the script.
 
-**Demo accounts** (password `demo`): `admin@demo.test`, `owner@demo.test`, `hr.contrib@demo.test`, `it.contrib@demo.test`, `approver@demo.test`, `viewer@demo.test`. Use "Reset demo data" in the sidebar for a clean start. Data lives in one browser's `localStorage`, so use separate profiles to act as different users at the same time.
+**Demo accounts** (password `demo`): `admin@demo.test`, `owner@demo.test`, `hr.contrib@demo.test`, `it.contrib@demo.test`, `approver@demo.test`, `viewer@demo.test`. Use "Reset demo data" in the sidebar for a clean start. Data lives in one browser's `localStorage` and is shared by all tabs of that browser profile. The signed-in user is kept per tab, so open a second tab to act as another person at the same time. Do not use a different browser profile or a private window for the second person: they have their own empty data.
 
 **Demo script (the acceptance scenario):**
 1. Admin invites the owner. Owner signs in.

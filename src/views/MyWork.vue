@@ -11,7 +11,7 @@
       </div>
       <div class="flex gap-2 shrink-0">
         <router-link :to="`/maps/${s.mapId}`" class="btn btn-sm no-underline">Overview</router-link>
-        <router-link v-if="s.versionStatus === 'IN_PROGRESS'" :to="`/maps/${s.mapId}/canvas`" class="btn btn-sm btn-primary no-underline">Open canvas</router-link>
+        <router-link v-if="s.versionStatus === 'IN_PROGRESS'" :to="`/maps/${s.mapId}/edit`" class="btn btn-sm btn-primary no-underline">Open editor</router-link>
       </div>
     </div>
   </div>

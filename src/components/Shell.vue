@@ -48,8 +48,8 @@
           </div>
         </div>
         <div class="text-right leading-tight">
-          <div class="text-sm font-semibold">{{ session.user.name }}</div>
-          <div class="text-[11px] text-slate-400">{{ session.user.roles.join(' · ') }}</div>
+          <div class="text-sm font-semibold">{{ session.user?.name }}</div>
+          <div class="text-[11px] text-slate-400">{{ session.user?.roles.join(' · ') }}</div>
         </div>
         <button class="btn btn-sm" @click="signOut">Sign out</button>
       </header>
