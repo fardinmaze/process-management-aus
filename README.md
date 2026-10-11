@@ -2,6 +2,7 @@
 
 Collaborative process-mapping platform (working title). Owners initiate a map, split it into sections, allocate sections to contributors, and take it through two approval gates before it is published to a read-only viewer.
 
+- Full documentation: [`DOCUMENTATION.md`](DOCUMENTATION.md)
 - Product definition: [`MVP_SPEC.md`](MVP_SPEC.md)
 - Working rules: [`CLAUDE.md`](CLAUDE.md)
 - Current status: [`PROGRESS.md`](PROGRESS.md)

@@ -73,7 +73,7 @@ let timer = null
 
 const NAV = [
   { title: 'Overview', items: [{ to: '/dashboard', label: 'Dashboard' }] },
-  { title: 'Work', roles: ['OWNER', 'CONTRIBUTOR'], items: [{ to: '/my-work', label: 'My work', roles: ['OWNER', 'CONTRIBUTOR'] }] },
+  { title: 'Work', roles: ['OWNER', 'CONTRIBUTOR'], items: [{ to: '/my-work', label: 'My work', roles: ['OWNER', 'CONTRIBUTOR'] }, { to: '/todos', label: 'To-do list', roles: ['OWNER', 'CONTRIBUTOR'] }] },
   { title: 'Review', roles: ['APPROVER'], items: [{ to: '/reviews', label: 'Approval inbox', roles: ['APPROVER'] }] },
   {
     title: 'Process maps', items: [
@@ -87,6 +87,7 @@ const NAV = [
       { to: '/admin/invitations', label: 'Invitations', roles: ['ADMIN', 'OWNER'] },
       { to: '/admin/users', label: 'Users & roles', roles: ['ADMIN'] },
       { to: '/admin/folders', label: 'Folders', roles: ['ADMIN'] },
+      { to: '/admin/roles-systems', label: 'Roles & systems', roles: ['ADMIN'] },
       { to: '/admin/approval-chain', label: 'Approval chain', roles: ['ADMIN'] },
       { to: '/admin/activity', label: 'Activity log', roles: ['ADMIN'] },
     ],

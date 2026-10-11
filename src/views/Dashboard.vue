@@ -33,6 +33,12 @@
           </router-link>
         </div>
 
+        <div v-if="d.reviewsDue" class="card">
+          <h3 class="mt-0 text-sm">Reviews due</h3>
+          <p v-if="!d.reviewsDue.length" class="text-sm text-slate-400">No reviews due in the next 30 days.</p>
+          <router-link v-for="m in d.reviewsDue" :key="m.id" :to="`/maps/${m.id}`" class="block py-1.5 text-sm no-underline" :class="m.overdue ? 'text-red-600' : 'text-amber-700'">{{ m.title }} <span class="text-slate-500">· {{ m.overdue ? 'overdue since' : 'due' }} {{ fmtDate(m.due) }}</span></router-link>
+        </div>
+
         <div v-if="d.reviewsOverdue" class="card">
           <h3 class="mt-0 text-sm">Periodic reviews overdue</h3>
           <p v-if="!d.reviewsOverdue.length" class="text-sm text-slate-400">None overdue.</p>
