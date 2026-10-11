@@ -1,0 +1,39 @@
+.error-page {
+  @apply min-h-screen flex items-center justify-center bg-cream-100 p-6;
+}
+
+.error-card {
+  @apply bg-white rounded-2xl py-12 px-10 text-center max-w-[460px] w-full shadow-[0_4px_24px_rgba(0,0,0,0.08)];
+}
+
+.error-card__icon {
+  @apply w-20 h-20 rounded-full inline-flex items-center justify-center text-4xl mb-5;
+}
+
+.error-card__code {
+  @apply text-[5rem] font-black text-slate-800 m-0 mb-2 leading-none;
+}
+
+.error-card__title {
+  @apply text-2xl font-bold text-slate-800 m-0 mb-3;
+}
+
+.error-card__desc {
+  @apply text-[0.9rem] text-slate-500 m-0 mb-8 leading-relaxed;
+}
+
+.error-card__actions {
+  @apply flex justify-center gap-3 flex-wrap;
+}
+
+.btn {
+  @apply inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-sm font-semibold border-none cursor-pointer no-underline transition-colors;
+}
+
+.btn--primary {
+  @apply bg-brand-600 text-white hover:bg-brand-700;
+}
+
+.btn--ghost {
+  @apply bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200;
+}

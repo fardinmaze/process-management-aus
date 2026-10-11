@@ -1,0 +1,198 @@
+// Runs MVP_SPEC section 15 (the demo scenario) against the API layer, plus server-side permission denials.
+// Usage: node tests/acceptance.mjs
+import { webcrypto } from 'node:crypto'
+
+const store = new Map()
+globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) }
+if (!globalThis.crypto?.randomUUID) globalThis.crypto = webcrypto
+
+const { dispatch, resetDemo } = await import('../src/mock/server.js')
+resetDemo()
+
+let passed = 0
+let failed = 0
+const call = (path, payload) => dispatch(path, payload).data
+const as = (email) => call('auth/login', { email, password: 'demo' })
+function ok(name, cond) { if (cond) { passed++ } else { failed++; console.log('  FAIL:', name) } }
+function step(name) { console.log(`\n${name}`) }
+function denied(name, fn, code) {
+  try { fn(); failed++; console.log('  FAIL (was allowed):', name) } catch (e) {
+    if (code && e.code !== code) { failed++; console.log(`  FAIL (code ${e.code}, wanted ${code}):`, name, '-', e.message) } else { passed++ }
+  }
+}
+const nid = () => `n_${crypto.randomUUID()}`
+const node = (type, label, x = 40, y = 60) => ({ id: nid(), type, position: { x, y }, data: { label, description: '', role: 'HR', system: '', duration_minutes: null, attachment_ids: [], linked_map_id: null } })
+const edge = (a, b, label = '') => ({ id: `e_${crypto.randomUUID()}`, source: a.id, target: b.id, label })
+
+step('1. Admin invites the owner; the owner accepts')
+as('admin@demo.test')
+// seeded owner exists; also prove the invitation flow with a fresh owner-role invite
+const inv = call('invitation/create', { email: 'new.owner@demo.test', role: 'OWNER' })
+as('owner@demo.test')
+denied('owner cannot invite another OWNER', () => call('invitation/create', { email: 'x@demo.test', role: 'OWNER' }), 403)
+call('auth/logout')
+const acc = call('invitation/accept', { token: inv.token, name: 'New Owner', password: 'demo' })
+ok('invitee accepted with OWNER role', acc.roles.includes('OWNER'))
+denied('invitation cannot be reused', () => call('invitation/accept', { token: inv.token, name: 'x', password: 'demo' }), 400)
+
+step('2. Owner invites contributors, creates the map, defines + assigns sections, kicks off')
+as('owner@demo.test')
+const hrFolder = call('folder/list').find((f) => f.name === 'HR')
+const map = call('map/create', { title: 'New Employee Onboarding', description: 'From offer to day 30', folderId: hrFolder.id, reviewIntervalDays: 365 })
+ok('map code follows PM-{abbr}-{id}', /^PM-HR-\d+$/.test(map.code))
+const v1 = map.openVersion.id
+const users = call('user/list')
+const hugo = users.find((u) => u.email === 'hr.contrib@demo.test')
+const ivy = users.find((u) => u.email === 'it.contrib@demo.test')
+const olivia = users.find((u) => u.email === 'owner@demo.test')
+const s1 = call('section/create', { versionId: v1, title: 'HR admin', assigneeId: hugo.id })
+const s2 = call('section/create', { versionId: v1, title: 'IT setup', assigneeId: ivy.id })
+const s3 = call('section/create', { versionId: v1, title: 'Line manager tasks' })
+denied('kickoff blocked while a section has no assignee', () => call(`version/kickoff/${v1}`), 400)
+call(`section/assign/${s3.id}`, { assigneeId: olivia.id })
+call(`version/kickoff/${v1}`)
+ok('version is IN_PROGRESS', call(`version/detail/${v1}`).status === 'IN_PROGRESS')
+as('hr.contrib@demo.test')
+ok('contributor was notified of kickoff', call('notification/list').some((n) => /kicked off/.test(n.text)))
+
+step('3. Contributors edit different sections; locking is enforced by the server')
+const start = node('start', 'Offer accepted', 40, 60)
+const t1 = node('task', 'Create employee record', 240, 60)
+const t1b = node('task', '', 440, 60) // blank label -> lint warning
+as('hr.contrib@demo.test')
+let r = call(`section/save/${s1.id}`, { revision: 1, graph: { nodes: [start, t1, t1b], edges: [edge(start, t1), edge(t1, t1b)] } })
+ok('first save moves section to IN_PROGRESS', r.status === 'IN_PROGRESS' && r.revision === 2)
+denied('stale revision -> 409', () => call(`section/save/${s1.id}`, { revision: 1, graph: { nodes: [start], edges: [] } }), 409)
+denied('contributor cannot edit ANOTHER contributor\'s section (API, not UI)', () => call(`section/save/${s2.id}`, { revision: 1, graph: { nodes: [node('task', 'hack')], edges: [] } }), 403)
+denied('contributor cannot approve own section', () => call(`section/approve/${s1.id}`), 403)
+denied('contributor cannot kick off / add sections', () => call('section/create', { versionId: v1, title: 'sneaky' }), 403)
+denied('node ids must be unique across the map', () => call(`section/save/${s1.id}`, { revision: 2, graph: { nodes: [start, t1, t1b, { ...node('task', 'dup'), id: start.id }], edges: [] } }), 400)
+denied('cannot start an edge from another section\'s step', () => call(`section/save/${s1.id}`, { revision: 2, graph: { nodes: [start, t1, t1b], edges: [{ id: 'e_x', source: 'n_not-mine', target: t1.id, label: '' }] } }), 400)
+// attach a checklist document and leave a step comment
+const att = call('attachment/upload', { mapId: map.id, versionId: v1, sectionId: s1.id, nodeId: t1.id, ogTitle: 'checklist.txt', attachTitle: 'Onboarding checklist', category: 'Checklist', dataUrl: 'data:text/plain;base64,SGVsbG8=', size: 5 })
+ok('attachments default to INTERNAL', att.visibility === 'INTERNAL')
+call('comment/create', { mapId: map.id, versionId: v1, sectionId: s1.id, nodeId: t1.id, kind: 'COMMENT', body: 'Use the new HRIS form' })
+denied('contributor cannot add REVISION comments', () => call('comment/create', { mapId: map.id, versionId: v1, kind: 'REVISION', body: 'x' }), 403)
+
+as('it.contrib@demo.test')
+const t2 = node('task', 'Provision laptop', 40, 60)
+const t3 = node('decision', 'Remote worker?', 240, 60)
+const t3a = node('task', 'Ship laptop', 440, 20)
+r = call(`section/save/${s2.id}`, { revision: 1, graph: { nodes: [t2, t3, t3a], edges: [edge(t2, t3), edge(t3, t3a, 'Yes')] } }).revision
+ok('IT saved its section', r === 2)
+denied('IT cannot see/edit HR section', () => call(`section/save/${s1.id}`, { revision: 2, graph: { nodes: [], edges: [] } }), 403)
+
+// cross-section edge: HR's step connects to IT's step (edge is stored with its source's section)
+as('hr.contrib@demo.test')
+r = call(`section/save/${s1.id}`, { revision: 2, graph: { nodes: [start, t1, t1b], edges: [edge(start, t1), edge(t1, t1b), edge(t1b, t2)] } }).revision
+ok('HR can save an edge pointing at a step in IT section', r === 3)
+as('it.contrib@demo.test')
+denied('IT cannot delete a step another section connects to', () => call(`section/save/${s2.id}`, { revision: 2, graph: { nodes: [t3, t3a], edges: [edge(t3, t3a, 'Yes')] } }), 409)
+
+step('4. Submit; owner requests changes on IT setup, contributor fixes, owner approves all')
+as('hr.contrib@demo.test')
+call(`section/submit/${s1.id}`)
+as('it.contrib@demo.test')
+call(`section/submit/${s2.id}`)
+as('owner@demo.test')
+// owner builds the line-manager section too
+const t4 = node('task', 'Schedule 1:1s', 40, 60)
+const endN = node('end', 'Day-30 review done', 240, 60)
+call(`section/save/${s3.id}`, { revision: 1, graph: { nodes: [t4, endN], edges: [edge(t4, endN)] } })
+call(`section/submit/${s3.id}`)
+denied('request-changes needs a note', () => call(`section/request-changes/${s2.id}`, { note: '' }), 400)
+call(`section/request-changes/${s2.id}`, { note: 'Add the MFA enrolment step' })
+as('it.contrib@demo.test')
+denied('cannot resubmit while a revision comment is open / unchanged', () => call(`section/submit/${s2.id}`), 400)
+const mfa = node('task', 'Enrol MFA', 640, 20)
+call(`section/save/${s2.id}`, { revision: 2, graph: { nodes: [t2, t3, t3a, mfa], edges: [edge(t2, t3), edge(t3, t3a, 'Yes'), edge(t3, mfa, 'No')] } })
+denied('submit blocked by open REVISION comment', () => call(`section/submit/${s2.id}`), 400)
+const rev = call(`comment/list/${map.id}`).find((c) => c.kind === 'REVISION' && c.status === 'OPEN')
+call(`comment/resolve/${rev.id}`)
+call(`section/submit/${s2.id}`)
+as('owner@demo.test')
+for (const s of [s1, s2, s3]) call(`section/approve/${s.id}`)
+ok('all sections approved', call(`version/detail/${v1}`).sections.every((s) => s.status === 'APPROVED'))
+as('hr.contrib@demo.test')
+denied('approved section is immutable', () => call(`section/save/${s1.id}`, { revision: 3, graph: { nodes: [start], edges: [] } }), 409)
+
+step('5. Lint (warnings shown), then submit for publication')
+as('owner@demo.test')
+const lint = call(`version/lint/${v1}`)
+ok('lint has warnings but no blockers', lint.blocking.length === 0 && lint.warnings.length > 0)
+as('hr.contrib@demo.test')
+denied('contributor cannot submit for publication', () => call(`version/submit/${v1}`), 403)
+as('owner@demo.test')
+call(`version/submit/${v1}`)
+const inReview = call(`version/detail/${v1}`)
+ok('IN_REVIEW with immutable snapshot', inReview.status === 'IN_REVIEW' && inReview.graphSnapshot.nodes.length === 9)
+denied('chain enabled: submit never publishes directly (cannot self-approve)', () => call(`version/approve/${v1}`, {}), 403)
+as('it.contrib@demo.test')
+denied('IN_REVIEW: contributor cannot save', () => call(`section/save/${s2.id}`, { revision: 4, graph: { nodes: [], edges: [] } }), 409)
+
+step('6. Approver rejects once; owner reopens a section; fixed; approved; PUBLISHED')
+as('approver@demo.test')
+denied('reject requires a note', () => call(`version/reject/${v1}`, { note: '' }), 400)
+call(`version/reject/${v1}`, { note: 'Line manager section needs a probation step' })
+as('owner@demo.test')
+ok('rejected -> CHANGES_REQUESTED, back with the owner', call(`version/detail/${v1}`).status === 'CHANGES_REQUESTED')
+denied('reopen needs at least one section', () => call(`version/reopen/${v1}`, { sectionIds: [] }), 400)
+call(`version/reopen/${v1}`, { sectionIds: [s3.id] })
+const det = call(`version/detail/${v1}`)
+ok('only the reopened section is ASSIGNED, others stay APPROVED', det.sections.find((s) => s.id === s3.id).status === 'ASSIGNED' && det.sections.filter((s) => s.status === 'APPROVED').length === 2)
+const prob = node('task', 'Probation check-in', 440, 60)
+call(`section/save/${s3.id}`, { revision: 2, graph: { nodes: [t4, endN, prob], edges: [edge(t4, prob), edge(prob, endN)] } })
+call(`section/submit/${s3.id}`)
+call(`section/approve/${s3.id}`)
+call(`version/submit/${v1}`)
+as('owner@demo.test')
+ok('submitter is excluded from pending approvers', !call(`version/detail/${v1}`).approval.pendingApprovers.some((p) => p.name === 'Olivia Owner'))
+as('viewer@demo.test')
+denied('viewer cannot approve', () => call(`version/approve/${v1}`, {}), 403)
+as('approver@demo.test')
+call(`version/approve/${v1}`, { note: 'Looks good' })
+as('owner@demo.test')
+ok('version PUBLISHED', call(`version/detail/${v1}`).status === 'PUBLISHED')
+
+step('7. Viewer finds the map by search, opens it read-only, sends feedback')
+as('viewer@demo.test')
+const hits = call('published/search', { q: 'laptop' })
+ok('search finds the map via a step label', hits.some((h) => h.id === map.id))
+ok('search for gibberish finds nothing', call('published/search', { q: 'zzzxqy' }).length === 0)
+const pm = call(`published/map/detail/${map.id}`)
+ok('published view serves the snapshot', pm.snapshot.sections.length === 3)
+ok('internal attachment hidden from viewers', pm.attachments.length === 0)
+denied('viewer cannot open the unpublished authoring detail', () => call(`map/detail/${map.id}`), 403)
+denied('viewer cannot comment in authoring', () => call('comment/create', { mapId: map.id, versionId: v1, kind: 'COMMENT', body: 'x' }), 403)
+call('published/feedback/create', { mapId: map.id, body: 'Step 3 is unclear' })
+as('owner@demo.test')
+ok('owner notified of feedback', call('notification/list').some((n) => /feedback/i.test(n.text)))
+call(`attachment/toggle-portal/${att.id}`)
+as('viewer@demo.test')
+ok('attachment visible after owner flips it', call(`published/map/detail/${map.id}`).attachments.length === 1)
+call('auth/logout')
+denied('anonymous cannot read published maps', () => call('published/map/list'), 401)
+
+step('8. Version 2 with a change note; v1 stays live until v2 is approved')
+as('owner@demo.test')
+denied('change note required', () => call(`version/create-draft/${map.id}`, { changeNote: '' }), 400)
+const v2 = call(`version/create-draft/${map.id}`, { changeNote: 'Add contractor path' })
+denied('only one open version at a time', () => call(`version/create-draft/${map.id}`, { changeNote: 'again' }), 400)
+const v2d = call(`version/detail/${v2.id}`)
+ok('v2 sections cloned as APPROVED with assignees retained', v2d.sections.length === 3 && v2d.sections.every((s) => s.status === 'APPROVED' && s.assigneeId))
+denied('kickoff needs a reopened section', () => call(`version/kickoff/${v2.id}`), 400)
+call(`version/reopen/${v2.id}`, { sectionIds: [v2d.sections[0].id] })
+call(`version/kickoff/${v2.id}`)
+as('viewer@demo.test')
+ok('portal still shows version 1', call(`published/map/detail/${map.id}`).versionNo === 1)
+
+step('Approval chain guard: only the submitter eligible -> submit refused')
+as('admin@demo.test')
+const chain = call('approval-chain/preset-list/PROCESS_MAP')
+denied('non-APPROVER cannot be a stage approver', () => call('approval-chain/save/PROCESS_MAP', { enabled: true, stages: [{ name: 'S', rule: 'ANY_ONE', approvers: [hugo.id] }] }), 400)
+ok('chain config readable', chain.enabled && chain.stages.length === 1)
+as('owner@demo.test')
+denied('owner cannot change approval chain', () => call('approval-chain/save/PROCESS_MAP', { enabled: false, stages: [] }), 403)
+
+console.log(`\n${passed} checks passed, ${failed} failed.`)
+process.exit(failed ? 1 : 0)

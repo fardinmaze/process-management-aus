@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── No horizontal scroll on the site ─────────────────────────────────────── */
+/* Safety net: content that can't fit should wrap/shrink, never push the page
+   wide enough to create an x-axis scrollbar.
+   IMPORTANT: overflow-x:hidden must stay on `html` ONLY. On the root <html>
+   element, a non-visible overflow is specially propagated to the viewport
+   by the browser instead of creating a real scroll box, so it's harmless.
+   Putting it on `body`/`#app` instead makes THEM into scroll containers
+   (their overflow-y silently computes to `auto` too, per spec, even though
+   nothing ever actually overflows them since they're auto-height) — and any
+   `position: sticky` element nested inside then sticks relative to that
+   dead scroll container instead of the real page scroll, so it never
+   visibly sticks. Keep this rule scoped to `html` to avoid breaking sticky
+   sidebars anywhere in the app. */
+html {
+  overflow-x: hidden;
+}
+html, body, #app {
+  max-width: 100vw;
+}
+
+/* ── Custom scrollbar ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 4px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ── Focus ring ───────────────────────────────────────────────────────────── */
+:focus-visible { outline: 2px solid #2D5A27; outline-offset: 2px; }
+
+/* ── Shared animations ────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes spin-icon {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── Global utility classes ───────────────────────────────────────────────── */
+.spinning {
+  animation: spin-icon 0.7s linear infinite;
+  display: inline-block;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+}
+
+.pulse-dot {
+  animation: pulse-dot 2s ease infinite;
+}
+
+/* ── Print: strip the app chrome everywhere ───────────────────────────────────
+   A page's own `@media print` rules are scoped to that page's component and
+   can't reach the sidebar/navbar/footer — those live in AdminLayout.vue, an
+   ancestor. Handle them once, globally, here. Individual pages only need to
+   worry about hiding their own on-screen content and showing print-only markup. */
+@media print {
+  /* DOM depth: #app (mount point, kept by Vue) > #app-root (App.vue's own
+     root) > AdminLayout's root div (the one actually carrying bg-cream-100).
+     That's 2 levels below #app, not 1 — target both #app-root and its own
+     child so the cream background can't survive at either depth, and force
+     full page height so there's no cream strip left below short content. */
+  html, body, #app, #app-root, #app-root > div {
+    background: #fff !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  .sidebar             { display: none !important; }
+  .body-wrap > header  { display: none !important; } /* AppNavbar */
+  .body-wrap > footer  { display: none !important; } /* AdminLayout's own footer */
+  .body-wrap           { margin: 0 !important; min-height: 0 !important; }
+  main, main > div     { padding: 0 !important; margin: 0 !important; }
+  nav[aria-label="Breadcrumb"] { display: none !important; } /* AppBreadcrumb */
+}
