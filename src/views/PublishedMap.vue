@@ -12,8 +12,8 @@
     <p v-if="error" class="p-6 text-red-600">{{ error }}</p>
     <div v-else class="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
       <div class="h-[75vh] lg:h-auto lg:flex-1 shrink-0 lg:shrink min-w-0 flex flex-col">
-        <div class="flex gap-1 border-b border-slate-300 px-3 shrink-0" role="tablist">
-          <button v-for="t in ['Map', 'Procedure']" :key="t" role="tab" :aria-selected="tab === t" class="inline-flex items-center px-4 py-2.5 text-sm bg-transparent border-0 border-b-4 cursor-pointer" :class="tab === t ? 'border-brand-600 text-brand-700 font-semibold' : 'border-transparent text-slate-600 hover:text-brand-700'" @click="tab = t"><Icon :name="t === 'Map' ? 'map' : 'list'" :size="15" class="mr-1.5" />{{ t }}</button>
+        <div class="flex gap-1 border-b-4 border-brand-600 px-3 pt-2 shrink-0 bg-white" role="tablist">
+          <button v-for="t in ['Map', 'Procedure']" :key="t" role="tab" :aria-selected="tab === t" class="tab" :class="tab === t ? 'tab-on' : ''" @click="tab = t"><Icon :name="t === 'Map' ? 'map' : 'list'" :size="15" class="mr-1.5" />{{ t }}</button>
         </div>
 
         <div v-show="tab === 'Map'" class="flex-1 min-h-0"><ProcessMap v-if="map" ref="mapRef" :items="items" :selected-id="selectedId" vf-id="viewer" @select="selectedId = $event" /></div>
@@ -34,6 +34,7 @@
                   </div>
                   <ul v-if="a.tasks?.length" class="mt-1 mb-0 pl-9 text-sm text-slate-700"><li v-for="t in a.tasks" :key="t.id">{{ t.text }}</li></ul>
                   <p v-if="a.notes" class="mt-1 mb-0 pl-9 text-xs text-slate-500">{{ a.notes }}</p>
+                  <p v-if="contactOf(a)" class="mt-1 mb-0 pl-9 text-xs text-slate-700">Contact: {{ contactOf(a).name }}<span v-if="contactOf(a).deskName"> · {{ contactOf(a).deskName }}</span><span v-if="contactOf(a).officialEmail || contactOf(a).email"> · {{ contactOf(a).officialEmail || contactOf(a).email }}</span></p>
                   <p v-if="a.kind === 'decision'" class="mt-1 mb-0 pl-9 text-xs text-slate-600">Yes: {{ targetText(a, 'yes') }} · No: {{ targetText(a, 'no') }}</p>
                   <p v-else-if="a.next" class="mt-1 mb-0 pl-9 text-xs text-slate-600">Then: {{ targetText(a, 'next') }}</p>
                 </li>
@@ -44,6 +45,7 @@
       </div>
 
       <aside class="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-slate-300 lg:overflow-y-auto p-4 text-sm bg-[#F4F6F8]">
+        <div>
         <template v-if="sel">
           <div class="text-xs uppercase font-bold text-brand-900 mb-1">{{ sel.kind }} · {{ sectionTitle(sel.sectionId) }}</div>
           <h3 class="mt-0 mb-2">{{ sel.label || '(no label)' }}</h3>
@@ -57,10 +59,20 @@
             <div class="font-semibold text-xs text-slate-500">Documents</div>
             <button v-for="a in stepDocs" :key="a.id" class="block bg-transparent border-0 p-0 text-brand-700 underline cursor-pointer text-xs mb-1" @click="download(a)">{{ a.attachTitle }}</button>
           </div>
-          <button class="btn btn-sm mt-2" @click="selectedId = null">Clear selection</button>
+          <div v-if="selContact" class="mt-3 border border-slate-300 bg-white p-3">
+            <h4 class="mt-0 mb-2 text-sm flex items-center gap-2"><Icon name="user" :size="15" />Contact person details</h4>
+            <p v-if="selContact.source === 'lane'" class="text-xs text-slate-600 mt-0 mb-2">Lane contact: {{ sel.roleName }}</p>
+            <dl class="m-0 text-xs grid grid-cols-[7.5rem_1fr] gap-x-2 gap-y-1">
+              <dt class="font-semibold text-slate-600">Name</dt><dd class="m-0">{{ selContact.name || '-' }}</dd>
+              <dt class="font-semibold text-slate-600">Email</dt><dd class="m-0 break-all"><a v-if="selContact.email" :href="`mailto:${selContact.email}`">{{ selContact.email }}</a><template v-else>-</template></dd>
+              <dt class="font-semibold text-slate-600">Official email address</dt><dd class="m-0 break-all"><a v-if="selContact.officialEmail" :href="`mailto:${selContact.officialEmail}`">{{ selContact.officialEmail }}</a><template v-else>-</template></dd>
+              <dt class="font-semibold text-slate-600">Desk name</dt><dd class="m-0">{{ selContact.deskName || '-' }}</dd>
+            </dl>
+          </div>
+          <button class="btn btn-sm mt-3" @click="selectedId = null">Clear selection</button>
         </template>
         <template v-else>
-          <p class="mt-0 text-slate-500">Click a step on the map or in the procedure to read its details.</p>
+          <p class="mt-0 text-slate-500">Click a step on the map or in the procedure to see its activity details and contact person.</p>
           <p v-if="map?.changeNote" class="text-xs text-slate-500">Change note: {{ map.changeNote }}</p>
           <div v-if="map?.attachments.length">
             <div class="font-semibold text-xs text-slate-500 mb-1">Documents</div>
@@ -68,21 +80,28 @@
           </div>
         </template>
 
-        <form class="mt-6 pt-4 border-t border-slate-300" @submit.prevent="sendFeedback">
-          <h4 class="mt-0 mb-1 flex items-center gap-2"><Icon name="message" :size="16" />Send feedback</h4>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-300">
+        <form @submit.prevent="sendFeedback">
+          <h4 class="mt-0 mb-1 flex items-center gap-2"><Icon name="message" :size="16" />Send a response</h4>
           <p class="text-xs text-slate-500 mt-0">{{ sel ? 'About the selected step.' : 'About this map.' }} The owner is notified.</p>
-          <textarea v-model="feedback" class="input mb-2" rows="3" placeholder="What is unclear or wrong?" required />
-          <label class="flex items-center gap-2 text-xs mb-2"><input v-model="needsReply" type="checkbox"> I need a response</label>
-          <button class="btn btn-primary btn-sm"><Icon name="send" :size="13" />Send feedback</button>
+          <textarea v-model="feedback" class="input mb-2" rows="3" placeholder="Write your response: what is unclear, wrong or missing?" aria-label="Your response" />
+          <label class="label" for="resp-file">Attach a file (optional, up to 600 KB)</label>
+          <input id="resp-file" ref="fileInput" type="file" class="input mb-2" @change="onFile">
+          <p v-if="file" class="text-xs text-slate-600 mt-0 mb-2 flex items-center gap-1"><Icon name="file" :size="13" />{{ file.name }} ({{ Math.round(file.size / 1024) }} KB) <button type="button" class="bg-transparent border-0 p-0 text-brand-700 underline cursor-pointer text-xs" @click="clearFile">remove</button></p>
+          <label class="flex items-center gap-2 text-xs mb-2"><input v-model="needsReply" type="checkbox"> I need a reply</label>
+          <button class="btn btn-primary btn-sm"><Icon name="send" :size="13" />Send Response</button>
         </form>
 
         <div v-if="mine.length" class="mt-6 pt-4 border-t border-slate-300">
-          <h4 class="mt-0 mb-2">My feedback</h4>
+          <h4 class="mt-0 mb-2">My responses</h4>
           <div v-for="f in mine" :key="f.id" class="border border-slate-300 rounded p-2 mb-2 text-xs">
-            <div class="text-slate-500">{{ f.activityId ? `On: ${labelOf(f.activityId)}` : 'On the map' }} · <span :class="f.status === 'RESOLVED' ? 'text-green-700' : 'text-amber-700'">{{ f.status === 'RESOLVED' ? 'Resolved' : 'Open' }}</span><span v-if="f.responseRequired"> · response requested</span></div>
+            <div class="text-slate-500">{{ f.activityId ? `On: ${labelOf(f.activityId)}` : 'On the map' }} · <span :class="f.status === 'RESOLVED' ? 'text-green-700' : 'text-amber-700'">{{ f.status === 'RESOLVED' ? 'Resolved' : 'Open' }}</span><span v-if="f.responseRequired"> · reply requested</span></div>
             <div class="mt-1">{{ f.body }}</div>
+            <button v-for="a in f.attachments || []" :key="a.id" class="inline-flex items-center gap-1 bg-transparent border-0 p-0 mt-1 mr-3 text-brand-700 underline cursor-pointer text-xs" @click="download(a)"><Icon name="file" :size="13" />{{ a.name }}</button>
             <div v-for="r in f.replies" :key="r.id" class="mt-1 pl-2 border-l-2 border-brand-200 text-slate-700"><b>{{ r.authorName }}:</b> {{ r.body }}</div>
           </div>
+        </div>
         </div>
       </aside>
     </div>
@@ -109,6 +128,10 @@ const selectedId = ref(null)
 const exporting = ref(false)
 const mapRef = ref(null)
 const mine = ref([])
+const file = ref(null)
+const fileInput = ref(null)
+const selContact = computed(() => { const a = sel.value; if (!a) return null; if (a.contact?.name) return { ...a.contact, source: 'step' }; return a.roleContact?.name ? { ...a.roleContact, source: 'lane' } : null })
+const contactOf = (a) => (a.contact?.name ? a.contact : a.roleContact?.name ? a.roleContact : null)
 
 const acts = computed(() => map.value?.snapshot.activities || [])
 const items = computed(() => (map.value ? toMapItems(acts.value, { sections: map.value.snapshot.sections }) : []))
@@ -134,11 +157,22 @@ onMounted(async () => {
   } catch (e) { error.value = errMsg(e) }
 })
 
+function onFile(e) {
+  const f = e.target.files?.[0]
+  if (!f) { file.value = null; return }
+  if (f.size > 600 * 1024) { toast('That file is over the 600 KB demo limit.', 'error'); clearFile(); return }
+  const rd = new FileReader()
+  rd.onload = () => { file.value = { name: f.name, size: f.size, dataUrl: rd.result } }
+  rd.readAsDataURL(f)
+}
+function clearFile() { file.value = null; if (fileInput.value) fileInput.value.value = '' }
 async function sendFeedback() {
+  if (!feedback.value.trim() && !file.value) { toast('Write a response or attach a file first.', 'error'); return }
   try {
-    await call('published/feedback/create', { mapId: Number(props.id), activityId: selectedId.value, body: feedback.value, responseRequired: needsReply.value })
+    await call('published/feedback/create', { mapId: Number(props.id), activityId: selectedId.value, body: feedback.value, responseRequired: needsReply.value, file: file.value })
     feedback.value = ''
     needsReply.value = false
+    clearFile()
     toast('Thanks. The owner has been notified.')
     await loadMine()
   } catch (e) { toast(errMsg(e), 'error') }
@@ -172,7 +206,7 @@ async function exportFile(kind) {
 </script>
 
 <style scoped>
-.proc-step { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 6px; cursor: pointer; background: #fff; }
-.proc-step--sel { border-color: #0067B1; background: #EAF3FA; box-shadow: 0 0 0 2px #FFD200; }
+.proc-step { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 0; margin-bottom: 6px; cursor: pointer; background: #fff; }
+.proc-step--sel { border-color: #005238; background: #E8F3EE; box-shadow: 0 0 0 2px #F9B000; }
 @media print { .proc-step { break-inside: avoid; } }
 </style>

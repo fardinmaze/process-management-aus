@@ -18,7 +18,7 @@ const uid = (p) => `${p}_${crypto.randomUUID()}`
 const clone = (x) => (x === undefined ? x : JSON.parse(JSON.stringify(x)))
 
 // ───────────────────────── persistence ─────────────────────────
-const SCHEMA = 2 // 2 = outline model (activities); older saved demo data is discarded
+const SCHEMA = 3 // 3 = contact person fields + extra sample map; 2 = outline model (activities). Older saved demo data is discarded
 function seed() {
   const users = [
     { id: 1, name: 'Avery Admin',     email: 'admin@demo.test',       roles: ['ADMIN'],       password: 'demo' },
@@ -55,6 +55,7 @@ function save() { try { localStorage.setItem(DB_KEY, JSON.stringify(db)) } catch
 export function resetDemo({ bare = false } = {}) { db = seed(); if (bare) db.sampleDone = true; save(); sess().removeItem(SESSION_KEY) }
 export function needsSample() { return !load().sampleDone }
 export function markSampleDone() { db = null; load().sampleDone = true; save() }
+const cleanContact = (c) => ({ name: String(c?.name || '').trim().slice(0, 100), email: String(c?.email || '').trim().slice(0, 150), officialEmail: String(c?.officialEmail || '').trim().slice(0, 150), deskName: String(c?.deskName || '').trim().slice(0, 100) })
 const nextId = (k) => ++load().seq[k]
 
 // ───────────────────────── helpers ─────────────────────────
@@ -198,7 +199,7 @@ function buildSnapshot(version) {
   return {
     schema_version: 2,
     sections: secs.map((s) => ({ id: s.id, title: s.title, description: s.description, order: s.order, assigneeName: s.assigneeId ? userName(s.assigneeId) : null })),
-    activities: allItems(version).map((a) => ({ ...clone(a), roleName: role(a.role_id), systemName: system(a.system_id) })),
+    activities: allItems(version).map((a) => { const r = byId(d.roles, a.role_id); return { ...clone(a), roleName: role(a.role_id), systemName: system(a.system_id), roleContact: { name: r?.contactName || '', email: r?.contactEmail || '', officialEmail: r?.contactOfficialEmail || '', deskName: r?.contactDeskName || '' } } }),
   }
 }
 function buildSearchText(map, snapshot) {
@@ -318,20 +319,22 @@ route('folder/delete/:pk', (_, { pk }) => {
 
 // ── maps ──
 // ── role library (the swimlanes) and systems list ──
+const roleContact = (p) => ({ contactName: String(p.contactName || '').trim().slice(0, 100), contactEmail: String(p.contactEmail || '').trim().slice(0, 150), contactOfficialEmail: String(p.contactOfficialEmail || '').trim().slice(0, 150), contactDeskName: String(p.contactDeskName || '').trim().slice(0, 100) })
 for (const [kind, key] of [['role', 'roles'], ['system', 'systems']]) {
   route(`${kind}/list`, () => { me(); return clone(load()[key]) })
-  route(`${kind}/create`, ({ name, description }) => {
+  route(`${kind}/create`, ({ name, description, contactName, contactEmail, contactOfficialEmail, contactDeskName }) => {
     const u = me(); if (!hasRole(u, 'ADMIN')) fail(403, `Only an admin can manage the ${kind} list.`)
     if (!String(name || '').trim()) fail(400, 'A name is required.')
     if (load()[key].some((x) => x.name.toLowerCase() === name.trim().toLowerCase())) fail(400, 'That name already exists.')
-    const x = { id: nextId(kind), name: name.trim(), ...(kind === 'role' ? { description: description || '' } : {}), isActive: true }
+    const x = { id: nextId(kind), name: name.trim(), ...(kind === 'role' ? { description: description || '', ...roleContact({ contactName, contactEmail, contactOfficialEmail, contactDeskName }) } : {}), isActive: true }
     load()[key].push(x); log(u, `${kind}.created`, kind, x.id); save(); return clone(x)
   })
-  route(`${kind}/edit/:pk`, ({ name, description, isActive }, { pk }) => {
+  route(`${kind}/edit/:pk`, ({ name, description, isActive, contactName, contactEmail, contactOfficialEmail, contactDeskName }, { pk }) => {
     const u = me(); if (!hasRole(u, 'ADMIN')) fail(403, `Only an admin can manage the ${kind} list.`)
     const x = byId(load()[key], pk); if (!x) fail(404, 'Not found.')
     if (name !== undefined) { if (!String(name).trim()) fail(400, 'A name is required.'); x.name = name.trim() }
     if (description !== undefined && kind === 'role') x.description = description
+    if (kind === 'role' && [contactName, contactEmail, contactOfficialEmail, contactDeskName].some((v) => v !== undefined)) Object.assign(x, roleContact({ contactName: contactName ?? x.contactName, contactEmail: contactEmail ?? x.contactEmail, contactOfficialEmail: contactOfficialEmail ?? x.contactOfficialEmail, contactDeskName: contactDeskName ?? x.contactDeskName }))
     if (isActive !== undefined) x.isActive = !!isActive
     log(u, `${kind}.updated`, kind, x.id); save(); return clone(x)
   })
@@ -559,7 +562,7 @@ route('section/save/:pk', ({ activities, revision, changeDescription }, { pk }) 
     if (a.system_id != null && !byId(d.systems, a.system_id)) fail(400, 'Unknown system.')
     const base = { id: a.id, kind: a.kind, label: String(a.label || '').slice(0, 200), role_id: a.role_id ?? null, system_id: a.system_id ?? null,
       tasks: (a.tasks || []).map((t) => ({ id: String(t.id || ''), text: String(t.text || '').slice(0, 500) })), notes: String(a.notes || '').slice(0, 2000),
-      attachment_ids: (a.attachment_ids || []).map(Number), linked_map_id: a.linked_map_id ?? null }
+      attachment_ids: (a.attachment_ids || []).map(Number), linked_map_id: a.linked_map_id ?? null, contact: cleanContact(a.contact) }
     if (a.kind === 'decision') return { ...base, yes: a.yes || null, no: a.no || null }
     return { ...base, next: a.next || null }
   })
@@ -639,7 +642,7 @@ route('comment/create', ({ mapId, versionId, sectionId, activityId, parentId, ki
   const parent = parentId ? byId(d.comments, parentId) : null
   if (parentId && (!parent || parent.mapId !== m.id)) fail(400, 'Invalid reply target.')
   d.comments.push(c); log(u, 'comment.created', 'comment', c.id, null, kind)
-  if (parent?.kind === 'FEEDBACK' && parent.authorId !== u.id) notify([parent.authorId], `${u.name} replied to your feedback on "${m.title}": ${c.body}`, `/published/${m.id}`)
+  if (parent?.kind === 'FEEDBACK' && parent.authorId !== u.id) notify([parent.authorId], `${u.name} replied to your response on "${m.title}": ${c.body}`, `/published/${m.id}`)
   if (kind === 'REVISION') notify([m.ownerId, ...(sectionId ? [sectionOf(sectionId).assigneeId] : [])].filter((x) => x !== u.id), `Revision comment on "${m.title}": ${c.body}`, `/maps/${m.id}`)
   save(); return { ...clone(c), authorName: u.name }
 })
@@ -677,7 +680,7 @@ route('attachment/list/:pk', (_, { pk }) => {
 route('attachment/download/:pk', (_, { pk }) => {
   const a = byId(load().attachments, pk); if (!a) fail(404, 'Not found.'); const m = mapOf(a.mapId); const u = me(false)
   const portalOk = a.visibility === 'PORTAL' && m.publishedVersionId && u
-  if (!(canViewUnpublished(u, m) || portalOk)) fail(403, 'No access.')
+  if (!(canViewUnpublished(u, m) || portalOk || (u && a.uploadedBy === u.id))) fail(403, 'No access.')
   return { name: a.ogTitle, dataUrl: a.dataUrl }
 })
 route('attachment/delete/:pk', (_, { pk }) => {
@@ -712,11 +715,13 @@ route('published/feedback/mine/:pk', (_, { pk }) => { // the signed-in reader's 
   const mineFb = d.comments.filter((c) => c.mapId === m.id && c.kind === 'FEEDBACK' && c.authorId === u.id)
   return clone(mineFb).map((f) => ({ ...f, replies: d.comments.filter((r) => r.parentId === f.id).map((r) => ({ ...clone(r), authorName: userName(r.authorId) })) })).reverse()
 })
-route('published/feedback/create', ({ mapId, activityId, body, responseRequired }) => {
+route('published/feedback/create', ({ mapId, activityId, body, responseRequired, file }) => {
   const u = me(); const m = mapOf(mapId); const d = load()
-  if (!m.publishedVersionId) fail(404, 'This map is not published.'); if (!String(body || '').trim()) fail(400, 'Write your feedback first.')
-  const c = { id: nextId('comment'), mapId: m.id, versionId: m.publishedVersionId, sectionId: null, activityId: activityId || null, parentId: null, kind: 'FEEDBACK', responseRequired: !!responseRequired, body: body.trim(), authorId: u.id, status: 'OPEN', resolvedBy: null, resolvedAt: null, createdAt: now() }
-  d.comments.push(c); log(u, 'feedback.received', 'comment', c.id); notify([m.ownerId], `New feedback on "${m.title}" from ${u.name}.`, `/maps/${m.id}`); save(); return clone(c)
+  if (!m.publishedVersionId) fail(404, 'This map is not published.'); if (!String(body || '').trim() && !file) fail(400, 'Write a response or attach a file first.')
+  if (file && !file.dataUrl) fail(400, 'Choose a file.'); if (file && file.size > 600 * 1024) fail(413, 'Demo storage limit is 600 KB per file.')
+  const c = { id: nextId('comment'), mapId: m.id, versionId: m.publishedVersionId, sectionId: null, activityId: activityId || null, parentId: null, kind: 'FEEDBACK', responseRequired: !!responseRequired, body: String(body || '').trim(), attachments: [], authorId: u.id, status: 'OPEN', resolvedBy: null, resolvedAt: null, createdAt: now() }
+  if (file) { const a = { id: nextId('attachment'), mapId: m.id, versionId: m.publishedVersionId, sectionId: null, activityId: activityId || null, commentId: c.id, ogTitle: String(file.name || 'file').slice(0, 150), attachTitle: String(file.name || 'file').slice(0, 150), category: 'Response', visibility: 'INTERNAL', uploadedBy: u.id, dataUrl: file.dataUrl, size: file.size || 0, createdAt: now() }; d.attachments.push(a); c.attachments.push({ id: a.id, name: a.ogTitle, size: a.size }) }
+  d.comments.push(c); log(u, 'feedback.received', 'comment', c.id); notify([m.ownerId], `New response on "${m.title}" from ${u.name}.`, `/maps/${m.id}`); save(); return clone(c)
 })
 
 // ── approval chain config & state ──

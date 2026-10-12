@@ -50,5 +50,5 @@ const PATHS = {
 </script>
 
 <style scoped>
-.icon { flex: none; vertical-align: -0.2em; }
+.icon { display: inline-block; flex: none; vertical-align: -0.2em; }
 </style>

@@ -10,11 +10,11 @@
       <Background :gap="20" pattern-color="#e2e8f0" />
       <Controls :show-interactive="false" />
       <template #node-lane="{ data }">
-        <div class="lane" :style="{ width: `${data.w}px`, height: `${data.h}px` }"><div class="lane__head" :style="{ width: `${data.headW}px` }">{{ data.role }}</div></div>
+        <div class="lane" :style="{ width: `${data.w}px`, height: `${data.h}px` }"><div class="lane__head" :style="{ width: `${data.headW}px` }"><span>{{ data.role }}</span><span v-if="data.contact" class="lane__contact">{{ data.contact }}</span></div></div>
       </template>
       <template #node-step="{ data }">
         <div class="step" :class="[`step--${data.kind}`, { 'step--selected': data.selected, 'step--norole': data.kind === 'activity' && !data.roleSet }]" :style="{ width: `${data.w}px`, height: `${data.h}px` }">
-          <svg v-if="data.kind === 'decision'" class="step__bg" viewBox="0 0 160 92" preserveAspectRatio="none" aria-hidden="true"><polygon points="80,2 158,46 80,90 2,46" fill="#FFF3B8" :stroke="data.selected ? '#0B2A4A' : '#E6BC00'" stroke-width="2" /></svg>
+          <svg v-if="data.kind === 'decision'" class="step__bg" viewBox="0 0 160 92" preserveAspectRatio="none" aria-hidden="true"><polygon points="80,2 158,46 80,90 2,46" fill="#FFF1C7" :stroke="data.selected ? '#06201A' : '#D99700'" stroke-width="2" /></svg>
           <div class="step__body">
             <div v-if="data.section" class="step__sec">{{ data.section }}</div>
             <div class="step__label">{{ data.label }}</div>
@@ -54,11 +54,12 @@ const res = computed(() => layout(props.items, null, { allowLoops: true }))
 // re-fit when the shape of the map changes, not on every keystroke in a label
 const signature = computed(() => res.value.nodes.map((n) => `${n.id}:${n.lane}:${n.col}`).join('|'))
 
+const contactByRole = computed(() => Object.fromEntries(props.items.filter((i) => i.roleContact?.name).map((i) => [i.role, i.roleContact.name])))
 const flow = computed(() => {
   const r = res.value
   const byId = Object.fromEntries(r.nodes.map((n) => [n.id, n]))
   const nodes = [
-    ...r.lanes.map((l) => ({ id: l.id, type: 'lane', position: { x: 0, y: l.y }, zIndex: -1, draggable: false, selectable: false, focusable: false, data: { role: l.role, w: l.w, h: l.h, headW: GEOM.laneHeaderW } })),
+    ...r.lanes.map((l) => ({ id: l.id, type: 'lane', position: { x: 0, y: l.y }, zIndex: -1, draggable: false, selectable: false, focusable: false, data: { role: l.role, contact: contactByRole.value[l.role] || '', w: l.w, h: l.h, headW: GEOM.laneHeaderW } })),
     ...r.nodes.map((n) => ({
       id: n.id, type: 'step', position: { x: n.x, y: n.y }, draggable: false, zIndex: 2,
       data: { kind: n.kind, w: n.w, h: n.h, label: n.kind === 'start' ? 'Start' : n.kind === 'end' ? 'End' : n.item.label, section: n.item?.section, system: n.item?.system, roleSet: n.item?.roleSet, selected: n.id === props.selectedId, badge: props.badges[n.id] || 0 },
@@ -68,7 +69,7 @@ const flow = computed(() => {
     const back = byId[e.target].col <= byId[e.source].col
     return {
       id: e.id, source: e.source, target: e.target, sourceHandle: 'r', targetHandle: 'l', label: e.label, type: 'routed', zIndex: 3, selectable: false,
-      markerEnd: MarkerType.ArrowClosed, style: { stroke: back ? '#dc2626' : '#0067B1', strokeWidth: 1.75, strokeDasharray: back ? '6 4' : undefined },
+      markerEnd: MarkerType.ArrowClosed, style: { stroke: back ? '#dc2626' : '#005238', strokeWidth: 1.75, strokeDasharray: back ? '6 4' : undefined },
       data: { path: pathOf(e.points), labelX: e.labelPos[0], labelY: e.labelPos[1] },
     }
   })
@@ -99,9 +100,10 @@ function onPick({ node }) { emit('select', node.type === 'step' && !['START', 'E
 
 <style scoped>
 .lane { border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; background: repeating-linear-gradient(90deg, transparent 0 219px, #f1f5f9 219px 220px); }
-.lane__head { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; font-weight: 700; color: #0B2A4A; background: #EAF3FA; border-right: 1px solid #A6CDE9; padding: 0 8px; }
-.step { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; background: #fff; border: 2px solid #0067B1; border-radius: 4px; padding: 4px 8px; font-size: 13px; color: #1a1f24; cursor: pointer; }
-.step--selected { box-shadow: 0 0 0 4px #FFD200; border-color: #0B2A4A; }
+.lane__contact { display: block; margin-top: 4px; font-size: 11px; font-weight: 400; color: #475569; }
+.lane__head { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 13px; font-weight: 700; color: #06201A; background: #E8F3EE; border-right: 1px solid #9FCDB8; padding: 0 8px; }
+.step { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; background: #fff; border: 2px solid #005238; border-radius: 0; padding: 4px 8px; font-size: 13px; color: #1a1f24; cursor: pointer; }
+.step--selected { box-shadow: 0 0 0 4px #F9B000; border-color: #06201A; }
 .step--norole { border-style: dashed; border-color: #CE9700; }
 .step--start, .step--end { border-radius: 999px; font-weight: 700; cursor: default; }
 .step--start { background: #f0fdf4; border-color: #16a34a; }
@@ -110,8 +112,8 @@ function onPick({ node }) { emit('select', node.type === 'step' && !['START', 'E
 .step__bg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .step__body { position: relative; z-index: 1; }
 .step__label { font-weight: 600; line-height: 1.2; }
-.step__sec { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #0067B1; }
+.step__sec { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #005238; }
 .step__sys { font-size: 11px; color: #475569; }
-.step__badge { position: absolute; top: -8px; right: -8px; z-index: 2; min-width: 18px; height: 18px; border-radius: 9px; background: #FFD200; color: #0B2A4A; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.step__badge { position: absolute; top: -8px; right: -8px; z-index: 2; min-width: 18px; height: 18px; border-radius: 9px; background: #F9B000; color: #06201A; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 :deep(.vue-flow__handle) { width: 6px; height: 6px; min-width: 0; min-height: 0; background: #94a3b8; border: 0; }
 </style>

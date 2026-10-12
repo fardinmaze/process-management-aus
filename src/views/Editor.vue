@@ -15,10 +15,11 @@
     <div v-else-if="ver && !mySections.length" class="bg-brand-50 border-b border-brand-200 text-brand-900 text-sm px-4 py-2 flex items-center gap-2"><Icon name="lock" :size="14" />{{ readOnlyReason }}</div>
 
     <p v-if="loading" class="p-6 text-slate-500">Loading…</p>
-    <div v-else class="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
+    <div v-else class="flex flex-col flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
       <!-- Outline -->
-      <div ref="outlineEl" class="w-full lg:w-[44%] lg:min-w-[420px] shrink-0 border-b lg:border-b-0 lg:border-r border-slate-300 lg:overflow-y-auto p-4 bg-[#F4F6F8]">
-        <p class="text-xs text-slate-500 mt-0 mb-3">Write each section as a list of activities. The map on the right is drawn for you. Other sections are read-only.</p>
+      <div ref="outlineEl" class="order-2 w-full shrink-0 lg:shrink lg:flex-1 lg:min-h-0 border-t-4 border-brand-600 lg:overflow-y-auto p-4 bg-[#F4F6F8]">
+        <div class="max-w-5xl mx-auto">
+        <p class="text-sm text-slate-600 mt-0 mb-3">Write each section as a list of activities. The map above is drawn for you. Other sections are read-only.</p>
         <section v-for="sec in ver.sections" :key="sec.id" class="mb-5">
           <header class="flex items-center gap-2 mb-2">
             <h2 class="text-sm font-bold m-0">{{ sec.title }}</h2>
@@ -76,6 +77,17 @@
                 </div>
               </div>
 
+              <div class="mb-2">
+                <div class="label">Contact person for this step (optional)</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input v-model="a.contact.name" class="input" placeholder="Name" :aria-label="`Contact name, step ${globalIndex(a.id) + 1}`">
+                  <input v-model="a.contact.email" class="input" type="email" placeholder="Email" :aria-label="`Contact email, step ${globalIndex(a.id) + 1}`">
+                  <input v-model="a.contact.officialEmail" class="input" type="email" placeholder="Official email address" :aria-label="`Official email, step ${globalIndex(a.id) + 1}`">
+                  <input v-model="a.contact.deskName" class="input" placeholder="Desk name" :aria-label="`Desk name, step ${globalIndex(a.id) + 1}`">
+                </div>
+                <p v-if="roleContactOf(a)" class="text-xs text-slate-600 mt-1 mb-0">Lane contact if left blank: {{ roleContactOf(a) }}</p>
+              </div>
+
               <template v-if="a.kind === 'activity'">
                 <div class="label">Tasks</div>
                 <div v-for="(t, ti) in a.tasks" :key="t.id" class="flex gap-2 mb-1">
@@ -118,12 +130,13 @@
             </div>
           </template>
         </section>
+        </div>
       </div>
 
-      <!-- Right panel -->
-      <div class="h-[75vh] lg:h-auto lg:flex-1 shrink-0 lg:shrink min-w-0 flex flex-col">
-        <div class="flex gap-1 border-b border-slate-300 px-3 shrink-0 overflow-x-auto">
-          <button v-for="t in PANEL_TABS" :key="t" class="px-3 py-2.5 text-sm bg-transparent border-0 border-b-4 cursor-pointer whitespace-nowrap" :class="panelTab === t ? 'border-brand-600 text-brand-700 font-semibold' : 'border-transparent text-slate-600 hover:text-brand-700'" @click="panelTab = t">{{ t }}</button>
+      <!-- Map and comments panel (above the outline) -->
+      <div class="order-1 h-[60vh] lg:h-[46%] lg:min-h-[260px] shrink-0 min-w-0 flex flex-col">
+        <div class="flex gap-1 border-b-4 border-brand-600 px-3 pt-2 shrink-0 overflow-x-auto bg-white">
+          <button v-for="t in PANEL_TABS" :key="t" class="tab" :class="panelTab === t ? 'tab-on' : ''" @click="panelTab = t">{{ t }}</button>
           <div class="flex-1" />
           <span v-if="selectedItem" class="text-xs text-slate-500 self-center">Selected: {{ selectedItem.label || '(no label)' }} <button class="bg-transparent border-0 text-brand-700 cursor-pointer" @click="selectedId = null">clear</button></span>
         </div>
@@ -271,7 +284,8 @@ function selectFromMap(aid) {
   selectedId.value = aid
   if (aid) nextTick(() => document.getElementById(`card-${aid}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
 }
-const newItem = (kind) => ({ id: uuid('a'), kind, label: '', role_id: null, system_id: null, tasks: [], notes: '', attachment_ids: [], linked_map_id: null, ...(kind === 'decision' ? { yes: null, no: null } : { next: null }) })
+const roleContactOf = (a) => { const r = roles.value.find((x) => x.id === a.role_id); return r?.contactName ? [r.contactName, r.contactEmail, r.contactOfficialEmail, r.contactDeskName].filter(Boolean).join(' · ') : '' }
+const newItem = (kind) => ({ id: uuid('a'), kind, label: '', role_id: null, system_id: null, tasks: [], notes: '', attachment_ids: [], linked_map_id: null, contact: { name: '', email: '', officialEmail: '', deskName: '' }, ...(kind === 'decision' ? { yes: null, no: null } : { next: null }) })
 function addItem(sid, kind) {
   const it = newItem(kind)
   const list = drafts[sid]
@@ -394,7 +408,7 @@ function applyVersion(v, { keepDirty = false } = {}) {
     const mine = v.status === 'IN_PROGRESS' && editableSet.value.has(sec.id)
     if (!mine) { delete drafts[sec.id]; continue }
     if (keepDirty && drafts[sec.id] && JSON.stringify(drafts[sec.id]) !== lastSaved[sec.id]) { next[sec.id] = lastSaved[sec.id]; continue }
-    drafts[sec.id] = JSON.parse(JSON.stringify(sec.activities || []))
+    drafts[sec.id] = JSON.parse(JSON.stringify(sec.activities || [])).map((x) => ({ ...x, contact: { name: '', email: '', officialEmail: '', deskName: '', ...(x.contact || {}) } }))
     next[sec.id] = JSON.stringify(drafts[sec.id])
   }
   lastSaved = next
@@ -446,8 +460,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.card--sel { border-color: #0067B1; box-shadow: 0 0 0 3px #FFD200; }
-.ro-card { font-size: 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 10px; margin-bottom: 4px; color: #334155; cursor: pointer; }
-.ro-card--sel { border-color: #0067B1; background: #EAF3FA; box-shadow: 0 0 0 2px #FFD200; }
-.input--warn { border-color: #CE9700; background: #FFF8D6; }
+.card--sel { border-color: #005238; box-shadow: 0 0 0 3px #F9B000; }
+.ro-card { font-size: 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 0; padding: 6px 10px; margin-bottom: 4px; color: #334155; cursor: pointer; }
+.ro-card--sel { border-color: #005238; background: #E8F3EE; box-shadow: 0 0 0 2px #F9B000; }
+.input--warn { border-color: #CE9700; background: #FFF1C7; }
 </style>

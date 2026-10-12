@@ -3,24 +3,25 @@ export default {
   content: ['./index.html', './src/**/*.{vue,js}'],
   theme: {
     extend: {
+      borderRadius: { DEFAULT: '0', sm: '0', md: '0', lg: '0', xl: '0', '2xl': '0' },
       fontFamily: {
         sans: ['"Segoe UI"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
       },
       colors: {
          brand: {
-            50:  '#EAF3FA',
-            100: '#D3E6F4',
-            200: '#A6CDE9',
-            300: '#78B3DD',
-            400: '#3F90CC',
-            500: '#0067B1',
-            600: '#0067B1',
-            700: '#00508C',
-            800: '#003A66',
-            900: '#0B2A4A',
-            950: '#071A2E',
+            50:  '#E8F3EE',
+            100: '#CFE6DB',
+            200: '#9FCDB8',
+            300: '#6FB495',
+            400: '#3F8F6C',
+            500: '#00704A',
+            600: '#005238',
+            700: '#003E2B',
+            800: '#002E20',
+            900: '#06201A',
+            950: '#031510',
           },
-          gold: { 100: '#FFF3B8', 300: '#FFE566', 500: '#FFD200', 600: '#E6BC00' },
+          gold: { 100: '#FFF1C7', 300: '#FFD66B', 500: '#F9B000', 600: '#D99700' },
 
           secondary: {
             50:  '#EBFFED',

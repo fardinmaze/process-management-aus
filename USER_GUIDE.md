@@ -33,13 +33,14 @@ The signed-in user is kept **per browser tab**, but the data is **shared** betwe
 
 ### Pre-loaded sample data
 
-The first time the app loads it creates three maps and four to-dos:
+The first time the app loads it creates four maps and four to-dos:
 
 | Map | Folder | State | Purpose |
 |---|---|---|---|
-| **New Employee Onboarding** (PM-HR-1) | HR | **Published**, v1, with views and one open feedback item | Show the finished result and the viewer |
-| **IT Access Request** (PM-IT-2) | IT | **In progress**: one section submitted, one being written, one not started | Show work mid-way and the owner's approval step |
-| **Expense Reimbursement** (PM-FIN-3) | Finance | **Just kicked off**: every section assigned, nothing written | Show a contributor's "My work" and the editor from scratch |
+| **New Employee Onboarding** (PM-HR-1) | HR | **Published**, v1, with views, contact people on every step and one open response with a file | Show the finished result and the viewer |
+| **Staff Leave Request** (PM-HR-2) | HR | **Published**, v1, a request, an approval decision and a payroll step | A second published map; every step has contact person details |
+| **IT Access Request** (PM-IT-3) | IT | **In progress**: one section submitted, one being written, one not started | Show work mid-way and the owner's approval step |
+| **Expense Reimbursement** (PM-FIN-4) | Finance | **Just kicked off**: every section assigned, nothing written | Show a contributor's "My work" and the editor from scratch |
 
 **Reset demo data** (bottom of the left menu) throws away everything and restores exactly this starting set, then signs you out.
 
@@ -92,13 +93,14 @@ Click **Kick off**. The version moves from *Planning* to *In progress*, and ever
 Switch to a contributor (e.g. **Hugo Hall**, `hr.contrib@demo.test`), then:
 
 1. On the **Dashboard** open **My work** and click **Open editor** on the section.
-2. In the editor the left side is the **outline**, the right side is the **live map**.
+2. In the editor the **live map** (with Comments and Documents tabs) is at the top and the **outline** you write in is below it.
 3. Click **+ Activity** and fill in:
    - **Label**: start with a verb ("Create employee record")
    - **Role (lane)**: who does it. Each role becomes a swimlane.
    - **System** (optional): the tool used
    - **Tasks**: the individual actions, one per line (press Enter for the next)
    - **Notes**: tips and rules for the person doing the step
+   - **Contact person for this step** (optional): name, email, official email address and desk name. If left blank, the lane's contact is shown to readers.
    - **After this step**: continue to the next step, end the process, or jump to another step
 4. Click **+ Decision** for a Yes/No question. Choose where **If Yes** and **If No** go. Decisions can only point **forward** (no loops).
 5. Use the arrow buttons to reorder, the bin to delete.
@@ -146,11 +148,12 @@ As the owner: tick the sections that need work, click **Reopen N selected sectio
 
 Sign in as **Vera Viewer** (`viewer@demo.test`) or anyone else, then open **Published maps**.
 
-- **Map tab**: the swimlane diagram. Click any step to see its role, system, tasks, notes and documents in the side panel. Drag to pan, scroll to zoom.
+- **Map tab**: the swimlane diagram. Click any step to see its role, system, contact person, tasks, notes and documents in the **right-hand panel** (activity details, contact person details, then the response form). Drag to pan, scroll to zoom.
 - **Procedure tab**: the same process as a numbered step-by-step document. Use **Print** for a paper copy.
 - **Export PNG / Export PDF**: download the diagram (done in the browser; nothing is uploaded).
-- **Send feedback**: select a step (or leave nothing selected to comment on the whole map), type your feedback, tick **I need a response** if you want an answer, and click **Send feedback**. The owner is notified, and replies appear under **My feedback**.
-- Owners can reply, **Resolve** and reopen feedback threads from the map's **Comments** tab.
+- **Send a response**: select a step (or leave nothing selected to respond about the whole map), type your response and/or **attach a file** (up to 600 KB), tick **I need a reply** if you want an answer, and click **Send Response**. The owner is notified and can open your file from the map's **Comments** tab. Replies appear under **My responses**.
+- **Contact person details**: the right-hand panel shows Name, Email, Official email address and Desk name for the selected step. A step's own contact is shown if the owner set one, otherwise the contact for that lane (role). Lane contacts are also printed under each lane name on the map and on the **Procedure** tab.
+- Owners can reply, **Resolve** and reopen response threads from the map's **Comments** tab.
 
 ---
 
@@ -174,7 +177,7 @@ Inside a map the tabs are: **Sections**, **Summary**, **To-do**, **Team**, **Doc
 | **Invitations** | Invite a person by email and role. The app shows a copyable link instead of sending email |
 | **Users & roles** | See all users and their roles |
 | **Folders** | Maps are filed in folders; each folder can default an Expert and team members |
-| **Roles & systems** | The library of roles (these become swimlanes) and systems used in the editor dropdowns |
+| **Roles & systems** | The library of roles (these become swimlanes) and systems used in the editor dropdowns. Use **Contact** on a role to set the lane's contact person (name, email, official email address, desk name) |
 | **Approval chain** | The Gate 2 approvers (currently "Process Council", any one approver) |
 | **Activity log** | A record of every create, change and approval |
 
@@ -182,7 +185,7 @@ Inside a map the tabs are: **Sections**, **Summary**, **To-do**, **Team**, **Doc
 
 ## 7. Suggested presenter script (about 10 minutes)
 
-1. **Show the finished product (1 min).** Sign in as Vera Viewer. Open **Published maps** > *New Employee Onboarding*. Click a step, switch to the **Procedure** tab, show **Export PDF**, and send one piece of feedback.
+1. **Show the finished product (1 min).** Sign in as Vera Viewer. Open **Published maps** > *New Employee Onboarding*. Click a step, switch to the **Procedure** tab, show **Export PDF**, and send a response with a file attached.
 2. **Show contributor work (2 min).** In a second tab sign in as Hugo Hall. On the dashboard show **My work** and **To-do list**, open *Expense Reimbursement* > **Open editor**, add two activities and a decision, and point out the live map and autosave.
 3. **Show the owner's control (2 min).** In a third tab sign in as Olivia Owner. Open *IT Access Request*, approve the submitted section, request changes on another with a note, and run **map lint**.
 4. **Show the gates (3 min).** Fastest route to a live approval: create a small new map (Section 3), have a contributor write one step, approve it, **Submit for publication**, then as Aaron Approver open the **Approval inbox** and click **Approve**. Open **Published maps** to show it live.

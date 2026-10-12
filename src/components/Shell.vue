@@ -13,9 +13,9 @@
             v-for="item in group.items"
             :key="item.to"
             :to="item.to"
-            class="flex items-center rounded px-3 py-2 text-slate-700 no-underline hover:bg-brand-50"
-            active-class="!bg-brand-600 !text-white font-semibold"
-          ><Icon :name="item.icon" :size="17" class="mr-2.5" />{{ item.label }}</router-link>
+            class="nav-link flex items-center px-2 py-2 text-slate-800 font-semibold no-underline border-b-2 border-brand-600 mb-1.5 hover:bg-brand-50"
+            active-class="nav-active"
+          ><span class="nav-tile mr-3"><Icon :name="item.icon" :size="16" /></span>{{ item.label }}</router-link>
         </template>
       </nav>
       <div class="p-3 border-t border-slate-100 text-xs text-slate-500">
@@ -24,7 +24,7 @@
     </aside>
 
     <div class="flex-1 min-w-0 flex flex-col">
-      <header class="h-14 shrink-0 bg-white border-b border-slate-300 flex items-center gap-3 px-3 sm:px-5">
+      <header class="h-14 shrink-0 bg-brand-600 text-white flex items-center gap-3 px-3 sm:px-5">
         <button class="btn btn-sm md:hidden" aria-label="Open menu" aria-controls="main-nav" :aria-expanded="navOpen" @click="navOpen = true"><Icon name="menu" :size="16" /></button>
         <div class="flex-1" />
         <div class="relative">
@@ -52,7 +52,7 @@
         </div>
         <div class="text-right leading-tight hidden sm:block">
           <div class="text-sm font-semibold">{{ session.user?.name }}</div>
-          <div class="text-[11px] text-slate-500">{{ session.user?.roles.join(' · ') }}</div>
+          <div class="text-xs text-brand-100">{{ session.user?.roles.join(' · ') }}</div>
         </div>
         <button class="btn btn-sm" @click="signOut"><Icon name="logout" :size="14" /><span class="hidden sm:inline">Sign out</span></button>
       </header>
@@ -114,3 +114,9 @@ function reset() {
 onMounted(() => { refreshNotifications(); timer = setInterval(refreshNotifications, 15000) })
 onBeforeUnmount(() => clearInterval(timer))
 </script>
+
+<style scoped>
+.nav-tile { display: grid; place-items: center; width: 28px; height: 28px; background: #005238; color: #fff; flex: none; }
+.nav-active { background: #005238; color: #fff !important; }
+.nav-active .nav-tile { background: #F9B000; color: #06201A; }
+</style>

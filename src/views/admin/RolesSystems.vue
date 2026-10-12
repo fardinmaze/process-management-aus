@@ -11,11 +11,22 @@
         </form>
         <div class="card p-0 overflow-hidden">
           <p v-if="!g.rows.length" class="p-4 text-sm text-slate-500 m-0">None yet.</p>
-          <div v-for="x in g.rows" :key="x.id" class="flex items-center gap-2 px-4 py-2 border-b border-slate-100 last:border-0">
-            <span class="flex-1 text-sm" :class="x.isActive ? '' : 'text-slate-500 line-through'">{{ x.name }}</span>
+          <template v-for="x in g.rows" :key="x.id">
+          <div class="flex items-center gap-2 px-4 py-2 border-b border-slate-100 last:border-0">
+            <span class="flex-1 text-sm" :class="x.isActive ? '' : 'text-slate-500 line-through'">{{ x.name }}<span v-if="g.kind === 'role' && x.contactName" class="block text-xs text-slate-600 no-underline">Contact: {{ x.contactName }}<span v-if="x.contactEmail"> · {{ x.contactEmail }}</span><span v-if="x.contactDeskName"> · {{ x.contactDeskName }}</span></span></span>
+            <button v-if="g.kind === 'role'" class="btn btn-sm" @click="openContact(x)"><Icon name="user" :size="13" />Contact</button>
             <button class="btn btn-sm" @click="toggle(g, x)">{{ x.isActive ? 'Deactivate' : 'Activate' }}</button>
             <button class="btn btn-sm btn-danger" @click="remove(g, x)">Delete</button>
           </div>
+          <form v-if="editing === x.id" class="px-4 py-3 bg-brand-50 border-b border-slate-200 grid gap-2" @submit.prevent="saveContact(x)">
+            <div class="label m-0">Lane contact person for {{ x.name }}</div>
+            <input v-model="form.contactName" class="input" placeholder="Name" aria-label="Contact name">
+            <input v-model="form.contactEmail" class="input" type="email" placeholder="Email" aria-label="Contact email">
+            <input v-model="form.contactOfficialEmail" class="input" type="email" placeholder="Official email address" aria-label="Official email address">
+            <input v-model="form.contactDeskName" class="input" placeholder="Desk name" aria-label="Desk name">
+            <div class="flex gap-2"><button class="btn btn-sm btn-primary">Save contact</button><button type="button" class="btn btn-sm" @click="editing = null">Cancel</button></div>
+          </form>
+          </template>
         </div>
       </section>
     </div>
@@ -23,7 +34,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { call } from '@/api'
 import { toast, errMsg } from '@/session'
 
@@ -36,5 +47,9 @@ async function wrap(fn, ok) { try { await fn(); if (ok) toast(ok); await load() 
 const add = (g) => wrap(async () => { await call(`${g.kind}/create`, { name: g.name }); g.name = '' }, 'Added.')
 const toggle = (g, x) => wrap(() => call(`${g.kind}/edit/${x.id}`, { isActive: !x.isActive }))
 const remove = (g, x) => wrap(() => call(`${g.kind}/delete/${x.id}`), 'Deleted.')
+const editing = ref(null)
+const form = reactive({ contactName: '', contactEmail: '', contactOfficialEmail: '', contactDeskName: '' })
+function openContact(x) { editing.value = x.id; form.contactName = x.contactName || ''; form.contactEmail = x.contactEmail || ''; form.contactOfficialEmail = x.contactOfficialEmail || ''; form.contactDeskName = x.contactDeskName || '' }
+const saveContact = (x) => wrap(async () => { await call(`role/edit/${x.id}`, { ...form }); editing.value = null }, 'Contact saved.')
 onMounted(load)
 </script>

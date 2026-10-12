@@ -91,9 +91,9 @@
       </div>
 
       <!-- Tabs -->
-      <div class="flex gap-1 border-b border-slate-200 mb-4">
-        <button v-for="t in tabs" :key="t" class="px-4 py-2 text-sm bg-transparent border-0 border-b-2 cursor-pointer"
-                :class="tab === t ? 'border-brand-600 text-brand-700 font-semibold' : 'border-transparent text-slate-500'" @click="tab = t">
+      <div class="flex flex-wrap gap-1 border-b-4 border-brand-600 mb-4">
+        <button v-for="t in tabs" :key="t" class="tab"
+                :class="tab === t ? 'tab-on' : ''" @click="tab = t">
           {{ t }}<span v-if="t === 'Comments' && openComments" class="chip bg-amber-100 text-amber-700 ml-1">{{ openComments }}</span><span v-if="t === 'To-do' && openTodos" class="chip bg-amber-100 text-amber-700 ml-1">{{ openTodos }}</span>
         </button>
       </div>
@@ -229,6 +229,7 @@
             <div class="flex items-center gap-2"><StatusChip :status="c.status" /><button v-if="c.status === 'OPEN'" class="btn btn-sm" @click="resolve(c)">Resolve</button></div>
           </div>
           <div class="text-sm mt-1">{{ c.body }}</div>
+          <button v-for="f in c.attachments || []" :key="f.id" class="inline-flex items-center gap-1 bg-transparent border-0 p-0 mt-1 mr-3 text-brand-700 underline cursor-pointer text-xs" @click="download(f)"><Icon name="file" :size="13" />{{ f.name }}</button>
         </div>
       </div>
 

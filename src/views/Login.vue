@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-full flex items-center justify-center p-6 bg-brand-50 border-t-8 border-gold-500">
+  <div class="min-h-full flex items-center justify-center p-6 bg-brand-600 border-t-8 border-gold-500">
     <div class="w-full grid gap-6" :class="showDemo ? 'max-w-4xl md:grid-cols-2' : 'max-w-md'">
-      <form class="card p-8 border-t-4 !border-t-brand-600" @submit.prevent="submit">
+      <form class="card p-8 border-t-4 !border-t-gold-500" @submit.prevent="submit">
         <h1 class="text-2xl font-bold text-brand-700 m-0 flex items-center gap-2"><Icon name="map" :size="26" />Process Maps</h1>
         <p class="text-sm text-slate-600 mt-1 mb-6">Sign in to view and manage your organisation's process maps.</p>
         <label class="label" for="email">Email</label>
