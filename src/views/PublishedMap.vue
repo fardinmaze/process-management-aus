@@ -46,6 +46,28 @@
 
       <aside class="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-slate-300 lg:overflow-y-auto p-4 text-sm bg-[#F4F6F8]">
         <div>
+        <form @submit.prevent="sendFeedback">
+          <h4 class="mt-0 mb-1 flex items-center gap-2"><Icon name="message" :size="16" />Send a response</h4>
+          <p class="text-xs text-slate-500 mt-0">{{ sel ? 'About the selected step.' : 'About this map.' }} The owner is notified.</p>
+          <textarea v-model="feedback" class="input mb-2" rows="3" placeholder="Write your response: what is unclear, wrong or missing?" aria-label="Your response" />
+          <label class="label" for="resp-file">Attach a file (optional, up to 600 KB)</label>
+          <input id="resp-file" ref="fileInput" type="file" class="input mb-2" @change="onFile">
+          <p v-if="file" class="text-xs text-slate-600 mt-0 mb-2 flex items-center gap-1"><Icon name="file" :size="13" />{{ file.name }} ({{ Math.round(file.size / 1024) }} KB) <button type="button" class="bg-transparent border-0 p-0 text-brand-700 underline cursor-pointer text-xs" @click="clearFile">remove</button></p>
+          <label class="flex items-center gap-2 text-xs mb-2"><input v-model="needsReply" type="checkbox"> I need a reply</label>
+          <button class="btn btn-primary btn-sm"><Icon name="send" :size="13" />Send Response</button>
+        </form>
+
+        <div v-if="mine.length" class="mt-6 pt-4 border-t border-slate-300">
+          <h4 class="mt-0 mb-2 flex items-center gap-2"><Icon name="clock" :size="15" />Response history</h4>
+          <div v-for="f in mine" :key="f.id" class="border border-slate-300 rounded p-2 mb-2 text-xs">
+            <div class="text-slate-500">{{ f.activityId ? `On: ${labelOf(f.activityId)}` : 'On the map' }} · <span :class="f.status === 'RESOLVED' ? 'text-green-700' : 'text-amber-700'">{{ f.status === 'RESOLVED' ? 'Resolved' : 'Open' }}</span><span v-if="f.responseRequired"> · reply requested</span></div>
+            <div class="mt-1">{{ f.body }}</div>
+            <button v-for="a in f.attachments || []" :key="a.id" class="inline-flex items-center gap-1 bg-transparent border-0 p-0 mt-1 mr-3 text-brand-700 underline cursor-pointer text-xs" @click="download(a)"><Icon name="file" :size="13" />{{ a.name }}</button>
+            <div v-for="r in f.replies" :key="r.id" class="mt-1 pl-2 border-l-2 border-brand-200 text-slate-700"><b>{{ r.authorName }}:</b> {{ r.body }}</div>
+          </div>
+        </div>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-300">
         <template v-if="sel">
           <div class="text-xs uppercase font-bold text-brand-900 mb-1">{{ sel.kind }} · {{ sectionTitle(sel.sectionId) }}</div>
           <h3 class="mt-0 mb-2">{{ sel.label || '(no label)' }}</h3>
@@ -80,28 +102,6 @@
           </div>
         </template>
 
-        </div>
-        <div class="mt-6 pt-4 border-t border-slate-300">
-        <form @submit.prevent="sendFeedback">
-          <h4 class="mt-0 mb-1 flex items-center gap-2"><Icon name="message" :size="16" />Send a response</h4>
-          <p class="text-xs text-slate-500 mt-0">{{ sel ? 'About the selected step.' : 'About this map.' }} The owner is notified.</p>
-          <textarea v-model="feedback" class="input mb-2" rows="3" placeholder="Write your response: what is unclear, wrong or missing?" aria-label="Your response" />
-          <label class="label" for="resp-file">Attach a file (optional, up to 600 KB)</label>
-          <input id="resp-file" ref="fileInput" type="file" class="input mb-2" @change="onFile">
-          <p v-if="file" class="text-xs text-slate-600 mt-0 mb-2 flex items-center gap-1"><Icon name="file" :size="13" />{{ file.name }} ({{ Math.round(file.size / 1024) }} KB) <button type="button" class="bg-transparent border-0 p-0 text-brand-700 underline cursor-pointer text-xs" @click="clearFile">remove</button></p>
-          <label class="flex items-center gap-2 text-xs mb-2"><input v-model="needsReply" type="checkbox"> I need a reply</label>
-          <button class="btn btn-primary btn-sm"><Icon name="send" :size="13" />Send Response</button>
-        </form>
-
-        <div v-if="mine.length" class="mt-6 pt-4 border-t border-slate-300">
-          <h4 class="mt-0 mb-2">My responses</h4>
-          <div v-for="f in mine" :key="f.id" class="border border-slate-300 rounded p-2 mb-2 text-xs">
-            <div class="text-slate-500">{{ f.activityId ? `On: ${labelOf(f.activityId)}` : 'On the map' }} · <span :class="f.status === 'RESOLVED' ? 'text-green-700' : 'text-amber-700'">{{ f.status === 'RESOLVED' ? 'Resolved' : 'Open' }}</span><span v-if="f.responseRequired"> · reply requested</span></div>
-            <div class="mt-1">{{ f.body }}</div>
-            <button v-for="a in f.attachments || []" :key="a.id" class="inline-flex items-center gap-1 bg-transparent border-0 p-0 mt-1 mr-3 text-brand-700 underline cursor-pointer text-xs" @click="download(a)"><Icon name="file" :size="13" />{{ a.name }}</button>
-            <div v-for="r in f.replies" :key="r.id" class="mt-1 pl-2 border-l-2 border-brand-200 text-slate-700"><b>{{ r.authorName }}:</b> {{ r.body }}</div>
-          </div>
-        </div>
         </div>
       </aside>
     </div>

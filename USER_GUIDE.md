@@ -148,10 +148,10 @@ As the owner: tick the sections that need work, click **Reopen N selected sectio
 
 Sign in as **Vera Viewer** (`viewer@demo.test`) or anyone else, then open **Published maps**.
 
-- **Map tab**: the swimlane diagram. Click any step to see its role, system, contact person, tasks, notes and documents in the **right-hand panel** (activity details, contact person details, then the response form). Drag to pan, scroll to zoom.
+- **Map tab**: the swimlane diagram. Click any step to see its role, system, contact person, tasks, notes and documents in the **right-hand panel**, which shows, in order: the response form, your response history, then the activity details and contact person details. Drag to pan, scroll to zoom.
 - **Procedure tab**: the same process as a numbered step-by-step document. Use **Print** for a paper copy.
 - **Export PNG / Export PDF**: download the diagram (done in the browser; nothing is uploaded).
-- **Send a response**: select a step (or leave nothing selected to respond about the whole map), type your response and/or **attach a file** (up to 600 KB), tick **I need a reply** if you want an answer, and click **Send Response**. The owner is notified and can open your file from the map's **Comments** tab. Replies appear under **My responses**.
+- **Send a response**: select a step (or leave nothing selected to respond about the whole map), type your response and/or **attach a file** (up to 600 KB), tick **I need a reply** if you want an answer, and click **Send Response**. The owner is notified and can open your file from the map's **Comments** tab. Replies appear under **Response history**.
 - **Contact person details**: the right-hand panel shows Name, Email, Official email address and Desk name for the selected step. A step's own contact is shown if the owner set one, otherwise the contact for that lane (role). Lane contacts are also printed under each lane name on the map and on the **Procedure** tab.
 - Owners can reply, **Resolve** and reopen response threads from the map's **Comments** tab.
 
