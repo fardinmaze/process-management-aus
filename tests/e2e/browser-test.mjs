@@ -40,7 +40,7 @@ async function copyDb(from, to) {
 const owner = await newPage('owner')
 const op = owner.page
 await op.goto(`${BASE}/login`)
-await op.evaluate(async () => { const m = await import('/src/mock/server.js'); m.resetDemo() })
+await op.evaluate(async () => { const m = await import('/src/mock/server.js'); m.resetDemo({ bare: true }) })
 await login(op, 'owner@demo.test')
 
 // ---------- 1. New map via the UI ----------

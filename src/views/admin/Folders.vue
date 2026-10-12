@@ -1,6 +1,6 @@
 <template>
-  <div class="p-6 max-w-2xl">
-    <h1 class="text-xl font-bold mt-0 mb-1">Folders</h1>
+  <div class="p-4 sm:p-6 max-w-2xl">
+    <h1 class="text-xl font-bold mt-0 mb-1 flex items-center gap-2"><Icon name="folder" :size="22" />Folders</h1>
     <p class="text-sm text-slate-500 mt-0 mb-4">Repository categories such as HR or Finance. A folder can set a default Expert that new maps inherit.</p>
     <form class="card mb-4 flex gap-3" @submit.prevent="add">
       <input v-model="name" class="input" placeholder="New folder name" required aria-label="Folder name">

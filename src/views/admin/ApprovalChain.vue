@@ -1,11 +1,11 @@
 <template>
-  <div class="p-6 max-w-3xl">
-    <h1 class="text-xl font-bold mt-0 mb-1">Approval chain: PROCESS_MAP</h1>
+  <div class="p-4 sm:p-6 max-w-3xl">
+    <h1 class="text-xl font-bold mt-0 mb-1 flex items-center gap-2"><Icon name="shield" :size="22" />Approval chain: PROCESS_MAP</h1>
     <p class="text-sm text-slate-500 mt-0 mb-4">
       Gate 2. Each stage resolves by its rule (any one approver, or all). The person who submitted a version can never approve it.
       Changes apply to future submissions only; in-flight reviews keep the chain they started with.
     </p>
-    <p v-if="!chain" class="text-slate-400">Loading…</p>
+    <p v-if="!chain" class="text-slate-500">Loading…</p>
     <template v-else>
       <label class="flex items-center gap-2 mb-4 text-sm"><input v-model="chain.enabled" type="checkbox"> Approval chain enabled (when off, submitting publishes directly)</label>
       <div v-for="(s, i) in chain.stages" :key="i" class="card mb-3">
@@ -20,7 +20,7 @@
         <label v-for="u in approvers" :key="u.id" class="inline-flex items-center gap-1 mr-4 text-sm">
           <input v-model="s.approvers" type="checkbox" :value="u.id"> {{ u.name }}
         </label>
-        <p v-if="!approvers.length" class="text-xs text-slate-400">No users hold the APPROVER role yet.</p>
+        <p v-if="!approvers.length" class="text-xs text-slate-500">No users hold the APPROVER role yet.</p>
       </div>
       <div class="flex gap-2">
         <button class="btn" @click="chain.stages.push({ name: '', rule: 'ANY_ONE', approvers: [] })">Add stage</button>

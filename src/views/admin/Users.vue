@@ -1,6 +1,6 @@
 <template>
-  <div class="p-6 max-w-5xl">
-    <h1 class="text-xl font-bold mt-0 mb-1">Users & roles</h1>
+  <div class="p-4 sm:p-6 max-w-5xl">
+    <h1 class="text-xl font-bold mt-0 mb-1 flex items-center gap-2"><Icon name="users" :size="22" />Users & roles</h1>
     <p class="text-sm text-slate-500 mt-0 mb-4">A user can hold several roles. Admin, Owner, Contributor and Approver are paid seats; Viewer is free.</p>
     <div class="card p-0 overflow-hidden">
       <table class="w-full border-collapse">

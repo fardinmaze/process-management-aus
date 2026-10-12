@@ -1,6 +1,6 @@
 <template>
-  <div ref="root" class="relative w-full h-full bg-slate-50">
-    <div v-if="!items.length" class="absolute inset-0 flex items-center justify-center text-sm text-slate-400 p-6 text-center">
+  <div ref="root" class="relative w-full h-full bg-[#F4F6F8]">
+    <div v-if="!items.length" class="absolute inset-0 flex items-center justify-center text-sm text-slate-500 p-6 text-center">
       The map appears here as soon as someone adds an activity.
     </div>
     <VueFlow
@@ -14,7 +14,7 @@
       </template>
       <template #node-step="{ data }">
         <div class="step" :class="[`step--${data.kind}`, { 'step--selected': data.selected, 'step--norole': data.kind === 'activity' && !data.roleSet }]" :style="{ width: `${data.w}px`, height: `${data.h}px` }">
-          <svg v-if="data.kind === 'decision'" class="step__bg" viewBox="0 0 160 92" preserveAspectRatio="none" aria-hidden="true"><polygon points="80,2 158,46 80,90 2,46" fill="#fff7ed" :stroke="data.selected ? '#4f46e5' : '#f59e0b'" stroke-width="2" /></svg>
+          <svg v-if="data.kind === 'decision'" class="step__bg" viewBox="0 0 160 92" preserveAspectRatio="none" aria-hidden="true"><polygon points="80,2 158,46 80,90 2,46" fill="#FFF3B8" :stroke="data.selected ? '#0B2A4A' : '#E6BC00'" stroke-width="2" /></svg>
           <div class="step__body">
             <div v-if="data.section" class="step__sec">{{ data.section }}</div>
             <div class="step__label">{{ data.label }}</div>
@@ -68,7 +68,7 @@ const flow = computed(() => {
     const back = byId[e.target].col <= byId[e.source].col
     return {
       id: e.id, source: e.source, target: e.target, sourceHandle: 'r', targetHandle: 'l', label: e.label, type: 'routed', zIndex: 3, selectable: false,
-      markerEnd: MarkerType.ArrowClosed, style: { stroke: back ? '#dc2626' : '#4f46e5', strokeWidth: 1.75, strokeDasharray: back ? '6 4' : undefined },
+      markerEnd: MarkerType.ArrowClosed, style: { stroke: back ? '#dc2626' : '#0067B1', strokeWidth: 1.75, strokeDasharray: back ? '6 4' : undefined },
       data: { path: pathOf(e.points), labelX: e.labelPos[0], labelY: e.labelPos[1] },
     }
   })
@@ -99,10 +99,10 @@ function onPick({ node }) { emit('select', node.type === 'step' && !['START', 'E
 
 <style scoped>
 .lane { border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; background: repeating-linear-gradient(90deg, transparent 0 219px, #f1f5f9 219px 220px); }
-.lane__head { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 700; color: #334155; background: #f1f5f9; border-right: 1px solid #cbd5e1; padding: 0 8px; }
-.step { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; background: #eff6ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 4px 8px; font-size: 12px; color: #0f172a; cursor: pointer; }
-.step--selected { box-shadow: 0 0 0 3px #c7d2fe; border-color: #4f46e5; }
-.step--norole { border-style: dashed; border-color: #f59e0b; }
+.lane__head { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; font-weight: 700; color: #0B2A4A; background: #EAF3FA; border-right: 1px solid #A6CDE9; padding: 0 8px; }
+.step { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; background: #fff; border: 2px solid #0067B1; border-radius: 4px; padding: 4px 8px; font-size: 13px; color: #1a1f24; cursor: pointer; }
+.step--selected { box-shadow: 0 0 0 4px #FFD200; border-color: #0B2A4A; }
+.step--norole { border-style: dashed; border-color: #CE9700; }
 .step--start, .step--end { border-radius: 999px; font-weight: 700; cursor: default; }
 .step--start { background: #f0fdf4; border-color: #16a34a; }
 .step--end { background: #fef2f2; border-color: #dc2626; }
@@ -110,8 +110,8 @@ function onPick({ node }) { emit('select', node.type === 'step' && !['START', 'E
 .step__bg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .step__body { position: relative; z-index: 1; }
 .step__label { font-weight: 600; line-height: 1.2; }
-.step__sec { font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: #6366f1; }
-.step__sys { font-size: 10px; color: #64748b; }
-.step__badge { position: absolute; top: -8px; right: -8px; z-index: 2; min-width: 18px; height: 18px; border-radius: 9px; background: #f59e0b; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.step__sec { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #0067B1; }
+.step__sys { font-size: 11px; color: #475569; }
+.step__badge { position: absolute; top: -8px; right: -8px; z-index: 2; min-width: 18px; height: 18px; border-radius: 9px; background: #FFD200; color: #0B2A4A; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 :deep(.vue-flow__handle) { width: 6px; height: 6px; min-width: 0; min-height: 0; background: #94a3b8; border: 0; }
 </style>

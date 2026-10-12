@@ -52,7 +52,9 @@ function load() {
   return db
 }
 function save() { try { localStorage.setItem(DB_KEY, JSON.stringify(db)) } catch { fail(507, 'Browser storage is full. Use Reset demo data.') } }
-export function resetDemo() { db = seed(); save(); sess().removeItem(SESSION_KEY) }
+export function resetDemo({ bare = false } = {}) { db = seed(); if (bare) db.sampleDone = true; save(); sess().removeItem(SESSION_KEY) }
+export function needsSample() { return !load().sampleDone }
+export function markSampleDone() { db = null; load().sampleDone = true; save() }
 const nextId = (k) => ++load().seq[k]
 
 // ───────────────────────── helpers ─────────────────────────
@@ -797,7 +799,7 @@ route('todo/create', ({ mapId, title, note, assigneeId, dueDate }) => {
   const a = byId(d.users, assigneeId); if (!a || !hasRole(a, 'ADMIN', 'OWNER', 'CONTRIBUTOR')) fail(400, 'Choose who this is assigned to.')
   const t = { id: nextId('todo'), mapId: m.id, title: String(title).trim().slice(0, 200), note: String(note || '').slice(0, 1000), assigneeId: a.id, createdBy: u.id, dueDate: dueDate || null, done: false, doneAt: null, createdAt: now() }
   d.todos.push(t); addToTeam(m.id, a.id)
-  log(u, 'todo.created', 'todo', t.id, null, null, `Assigned to ${a.name}`); notify([a.id], `${u.name} assigned you a to-do on ${m.code}: ${t.title}`, '/todos'); save(); return todoView(t)
+  log(u, 'todo.created', 'todo', t.id, null, null, `Assigned to ${a.name}`); notify([a.id], `${u.name} assigned you a to-do on ${m.code}: ${t.title}`, '/dashboard'); save(); return todoView(t)
 })
 route('todo/list/:pk', (_, { pk }) => {
   const u = me(); const m = mapOf(pk); if (!canViewUnpublished(u, m)) fail(403, 'No access.')

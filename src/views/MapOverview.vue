@@ -1,15 +1,15 @@
 <template>
-  <div class="p-6 max-w-6xl">
+  <div class="p-4 sm:p-6 max-w-6xl">
     <p v-if="loadError" class="text-red-600">{{ loadError }}</p>
-    <p v-else-if="!map || !ver" class="text-slate-400">Loading…</p>
+    <p v-else-if="!map || !ver" class="text-slate-500">Loading…</p>
     <template v-else>
       <!-- Header -->
       <div class="flex flex-wrap items-start justify-between gap-4 mb-4">
         <div class="min-w-0">
-          <div class="text-xs font-mono text-slate-400">{{ map.code }} · {{ map.folderName }}</div>
+          <div class="text-xs font-mono text-slate-500">{{ map.code }} · {{ map.folderName }}</div>
           <h1 class="text-xl font-bold m-0">{{ map.title }}
             <StatusChip :status="ver.status" />
-            <span class="text-sm font-normal text-slate-400">v{{ ver.versionNo }}</span>
+            <span class="text-sm font-normal text-slate-500">v{{ ver.versionNo }}</span>
           </h1>
           <p v-if="map.description" class="text-sm text-slate-500 mt-1 mb-0">{{ map.description }}</p>
           <p class="text-xs text-slate-500 mt-1 mb-0">Owner {{ map.ownerName }}<span v-if="map.expertName"> · Expert {{ map.expertName }}</span><span v-if="map.lastReviewedAt"> · last reviewed {{ fmtDate(map.lastReviewedAt) }}</span><span v-if="map.nextReviewDue" :class="map.overdue ? 'text-red-600 font-semibold' : ''"> · next review {{ fmtDate(map.nextReviewDue) }}</span></p>
@@ -156,7 +156,7 @@
           <h3 class="mt-0 text-sm">Map team</h3>
           <div v-for="u in map.team" :key="u.id" class="flex items-center justify-between py-1.5 border-b border-slate-50 text-sm">
             <span>{{ u.name }} <span v-if="u.isOwner" class="chip bg-brand-50 text-brand-700">Owner</span></span>
-            <span class="text-xs text-slate-400">{{ u.roles.join(', ') }}</span>
+            <span class="text-xs text-slate-500">{{ u.roles.join(', ') }}</span>
           </div>
         </div>
         <form v-if="isOwner" class="card" @submit.prevent="invite">
@@ -164,7 +164,7 @@
           <input v-model="inv.email" type="email" class="input mb-2" placeholder="Email" required>
           <select v-model="inv.role" class="input mb-3"><option value="CONTRIBUTOR">Contributor</option><option value="VIEWER">Viewer</option></select>
           <button class="btn btn-primary" :disabled="busy">Send invitation</button>
-          <div v-if="inviteLink" class="mt-3 text-xs break-all bg-slate-50 rounded-lg p-2">
+          <div v-if="inviteLink" class="mt-3 text-xs break-all bg-slate-50 rounded p-2">
             Demo email (no mail server): <a :href="inviteLink">{{ inviteLink }}</a>
           </div>
         </form>
@@ -181,13 +181,13 @@
             <select v-model="doc.sectionId" class="input"><option value="">Whole map</option><option v-for="s in ver.sections" :key="s.id" :value="s.id">{{ s.title }}</option></select>
           </div>
           <button class="btn btn-primary mt-3" :disabled="busy">Upload</button>
-          <span class="text-xs text-slate-400 ml-2">Demo limit 600 KB. Attachments are internal by default.</span>
+          <span class="text-xs text-slate-500 ml-2">Demo limit 600 KB. Attachments are internal by default.</span>
         </form>
         <div class="card p-0 overflow-hidden">
           <table class="w-full border-collapse">
             <thead><tr><th class="th">Title</th><th class="th">Category</th><th class="th">Scope</th><th class="th">By</th><th class="th">Visibility</th><th class="th" /></tr></thead>
             <tbody>
-              <tr v-if="!attachments.length"><td class="td text-slate-400" colspan="6">No documents yet.</td></tr>
+              <tr v-if="!attachments.length"><td class="td text-slate-500" colspan="6">No documents yet.</td></tr>
               <tr v-for="a in attachments" :key="a.id">
                 <td class="td"><button class="bg-transparent border-0 text-brand-700 cursor-pointer p-0 text-sm underline" @click="download(a)">{{ a.attachTitle }}</button></td>
                 <td class="td">{{ a.category }}</td>
@@ -241,12 +241,12 @@
             <textarea :id="`sm-${f.key}`" v-model="summary[f.key]" class="input mb-3" rows="2" :placeholder="f.hint" :disabled="!isOwner" />
           </template>
           <button v-if="isOwner" class="btn btn-primary" :disabled="busy">Save summary and tags</button>
-          <span v-else class="text-xs text-slate-400">Only the map owner can edit the summary.</span>
+          <span v-else class="text-xs text-slate-500">Only the map owner can edit the summary.</span>
         </form>
         <div class="card self-start">
           <h3 class="mt-0 text-sm">Tags</h3>
           <div class="flex flex-wrap gap-1 mb-3">
-            <span v-if="!tagList.length" class="text-sm text-slate-400">No tags yet.</span>
+            <span v-if="!tagList.length" class="text-sm text-slate-500">No tags yet.</span>
             <span v-for="t in tagList" :key="t" class="chip bg-brand-50 text-brand-700">
               {{ t }}<button v-if="isOwner" type="button" class="bg-transparent border-0 cursor-pointer text-brand-700 ml-1 p-0" :aria-label="`Remove tag ${t}`" @click="removeTag(t)">×</button>
             </span>
@@ -255,7 +255,7 @@
             <input v-model="newTag" class="input" placeholder="Add a tag" aria-label="New tag" @keydown.enter.prevent="addTag">
             <button type="button" class="btn" @click="addTag">Add</button>
           </div>
-          <p class="text-xs text-slate-400 mb-0 mt-2">Tags are saved when you press Save summary and tags.</p>
+          <p class="text-xs text-slate-500 mb-0 mt-2">Tags are saved when you press Save summary and tags.</p>
         </div>
       </div>
 
@@ -273,16 +273,16 @@
           </div>
           <input v-model="newTodo.note" class="input mt-3" placeholder="Note (optional)" aria-label="Note">
           <button class="btn btn-primary mt-3" :disabled="busy">Add to-do</button>
-          <span class="text-xs text-slate-400 ml-2">It appears in the assignee's To-do list.</span>
+          <span class="text-xs text-slate-500 ml-2">It appears in the assignee's To-do list.</span>
         </form>
         <div class="card p-0 overflow-hidden">
           <table class="w-full border-collapse">
             <thead><tr><th class="th w-10" /><th class="th">To-do</th><th class="th">Assigned to</th><th class="th">Due</th><th class="th" /></tr></thead>
             <tbody>
-              <tr v-if="!todos.length"><td class="td text-slate-400" colspan="5">No to-dos yet.</td></tr>
+              <tr v-if="!todos.length"><td class="td text-slate-500" colspan="5">No to-dos yet.</td></tr>
               <tr v-for="t in todos" :key="t.id">
                 <td class="td"><input type="checkbox" :checked="t.done" :disabled="t.assigneeId !== session.user.id && !isOwner" :aria-label="`Mark ${t.title} done`" @change="toggleTodo(t)"></td>
-                <td class="td" :class="t.done ? 'line-through text-slate-400' : ''">{{ t.title }}<div v-if="t.note" class="text-xs text-slate-500 no-underline">{{ t.note }}</div></td>
+                <td class="td" :class="t.done ? 'line-through text-slate-500' : ''">{{ t.title }}<div v-if="t.note" class="text-xs text-slate-500 no-underline">{{ t.note }}</div></td>
                 <td class="td">{{ t.assigneeName }}</td>
                 <td class="td whitespace-nowrap" :class="!t.done && t.dueDate && t.dueDate < today ? 'text-red-600' : ''">{{ t.dueDate ? fmtDate(t.dueDate) : '' }}</td>
                 <td class="td"><button v-if="isOwner" class="btn btn-sm btn-danger" @click="removeTodo(t)">Delete</button></td>
@@ -297,7 +297,7 @@
         <table class="w-full border-collapse">
           <thead><tr><th class="th">When</th><th class="th">Who</th><th class="th">What changed</th><th class="th">Note</th></tr></thead>
           <tbody>
-            <tr v-if="!changeLog.length"><td class="td text-slate-400" colspan="4">Nothing yet.</td></tr>
+            <tr v-if="!changeLog.length"><td class="td text-slate-500" colspan="4">Nothing yet.</td></tr>
             <tr v-for="c in changeLog" :key="c.id"><td class="td whitespace-nowrap">{{ fmt(c.at) }}</td><td class="td">{{ c.userName }}</td><td class="td">{{ c.text }}</td><td class="td">{{ c.note }}</td></tr>
           </tbody>
         </table>
@@ -308,7 +308,7 @@
         <table class="w-full border-collapse">
           <thead><tr><th class="th">When</th><th class="th">Who</th><th class="th">Action</th><th class="th">Change</th><th class="th">Note</th></tr></thead>
           <tbody>
-            <tr v-if="!activity.length"><td class="td text-slate-400" colspan="5">No activity yet.</td></tr>
+            <tr v-if="!activity.length"><td class="td text-slate-500" colspan="5">No activity yet.</td></tr>
             <tr v-for="a in activity" :key="a.id">
               <td class="td whitespace-nowrap">{{ fmt(a.at) }}</td><td class="td">{{ a.userName }}</td><td class="td font-mono text-xs">{{ a.action }}</td>
               <td class="td">{{ a.from || a.to ? `${a.from || '—'} → ${a.to || '—'}` : '' }}</td><td class="td">{{ a.note }}</td>

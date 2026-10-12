@@ -1,34 +1,34 @@
 <template>
   <div class="flex flex-col bg-white" style="height: calc(100vh - 3.5rem)">
     <!-- Top bar -->
-    <div class="h-12 shrink-0 border-b border-slate-200 flex items-center gap-2 px-3 text-sm">
-      <router-link :to="`/maps/${id}`" class="btn btn-sm no-underline">Back</router-link>
-      <div class="font-semibold truncate max-w-[22rem]">{{ ver?.map.title }} <span class="text-slate-400 font-normal">v{{ ver?.versionNo }}</span></div>
+    <div class="h-12 shrink-0 border-b border-slate-300 border-t-4 border-t-gold-500 flex items-center gap-2 px-3 text-sm">
+      <router-link :to="`/maps/${id}`" class="btn btn-sm no-underline"><Icon name="back" :size="14" />Back</router-link>
+      <div class="font-semibold truncate max-w-[22rem]">{{ ver?.map.title }} <span class="text-slate-500 font-normal">v{{ ver?.versionNo }}</span></div>
       <StatusChip v-if="ver" :status="ver.status" />
       <div class="flex-1" />
       <span class="text-xs" :class="saveClass" role="status">{{ saveLabel }}</span>
     </div>
 
-    <div v-if="conflict" class="bg-red-50 border-b border-red-200 text-red-700 text-sm px-4 py-2 flex items-center gap-3">
+    <div v-if="conflict" class="bg-red-50 border-b border-red-300 text-red-800 text-sm px-4 py-2 flex items-center gap-3"><Icon name="alert" :size="16" />
       {{ conflict }} <button class="btn btn-sm" @click="reload">Reload latest</button>
     </div>
-    <div v-else-if="ver && !mySections.length" class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs px-4 py-1.5">{{ readOnlyReason }}</div>
+    <div v-else-if="ver && !mySections.length" class="bg-brand-50 border-b border-brand-200 text-brand-900 text-sm px-4 py-2 flex items-center gap-2"><Icon name="lock" :size="14" />{{ readOnlyReason }}</div>
 
-    <p v-if="loading" class="p-6 text-slate-400">Loading…</p>
-    <div v-else class="flex flex-1 min-h-0">
+    <p v-if="loading" class="p-6 text-slate-500">Loading…</p>
+    <div v-else class="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
       <!-- Outline -->
-      <div ref="outlineEl" class="w-[44%] min-w-[420px] shrink-0 border-r border-slate-200 overflow-y-auto p-4 bg-slate-50">
+      <div ref="outlineEl" class="w-full lg:w-[44%] lg:min-w-[420px] shrink-0 border-b lg:border-b-0 lg:border-r border-slate-300 lg:overflow-y-auto p-4 bg-[#F4F6F8]">
         <p class="text-xs text-slate-500 mt-0 mb-3">Write each section as a list of activities. The map on the right is drawn for you. Other sections are read-only.</p>
         <section v-for="sec in ver.sections" :key="sec.id" class="mb-5">
           <header class="flex items-center gap-2 mb-2">
             <h2 class="text-sm font-bold m-0">{{ sec.title }}</h2>
             <StatusChip :status="sec.status" />
-            <span class="text-[11px] text-slate-500">{{ sec.assigneeName || 'Unassigned' }}<span v-if="sec.openedBy && sec.openedBy.id !== me.id"> · {{ sec.openedBy.name }} has it open</span></span>
+            <span class="text-xs text-slate-500">{{ sec.assigneeName || 'Unassigned' }}<span v-if="sec.openedBy && sec.openedBy.id !== me.id"> · {{ sec.openedBy.name }} has it open</span></span>
             <div class="flex-1" />
-            <button v-if="canSubmit(sec)" class="btn btn-sm btn-primary" :disabled="submitting" @click="startSubmit(sec)">Submit section</button>
+            <button v-if="canSubmit(sec)" class="btn btn-sm btn-primary" :disabled="submitting" @click="startSubmit(sec)"><Icon name="send" :size="13" />Submit section</button>
           </header>
 
-          <div v-for="c in openRevisions(sec)" :key="c.id" class="text-xs bg-red-50 border border-red-200 text-red-700 rounded-lg p-2 mb-2">
+          <div v-for="c in openRevisions(sec)" :key="c.id" class="text-xs bg-red-50 border border-red-200 text-red-700 rounded p-2 mb-2">
             <strong>Changes requested:</strong> {{ c.body }}
           </div>
           <form v-if="submitFor === sec.id" class="card mb-2" @submit.prevent="submitSection(sec)">
@@ -40,10 +40,10 @@
 
           <!-- read-only section -->
           <template v-if="!isEditable(sec.id)">
-            <p v-if="!sec.activities.length" class="text-xs text-slate-400 mt-0">No activities yet.</p>
+            <p v-if="!sec.activities.length" class="text-xs text-slate-500 mt-0">No activities yet.</p>
             <div v-for="(a, i) in sec.activities" :key="a.id" class="ro-card" :class="{ 'ro-card--sel': selectedId === a.id }" @click="select(a.id)">
-              <span class="text-slate-400 mr-1">{{ i + 1 }}.</span><span v-if="a.kind === 'decision'" class="chip bg-amber-100 text-amber-700 mr-1">Decision</span>{{ a.label || '(no label)' }}
-              <span class="text-[11px] text-slate-500"> · {{ roleName(a.role_id) }}</span>
+              <span class="text-slate-500 mr-1">{{ i + 1 }}.</span><span v-if="a.kind === 'decision'" class="chip bg-gold-300 text-brand-900 mr-1">Decision</span>{{ a.label || '(no label)' }}
+              <span class="text-xs text-slate-500"> · {{ roleName(a.role_id) }}</span>
             </div>
           </template>
 
@@ -51,12 +51,12 @@
           <template v-else>
             <div v-for="(a, i) in drafts[sec.id]" :id="`card-${a.id}`" :key="a.id" class="card mb-2 p-3" :class="{ 'card--sel': selectedId === a.id }" @click="select(a.id)">
               <div class="flex items-center gap-2 mb-2">
-                <span class="text-xs font-bold text-slate-400 w-6">{{ globalIndex(a.id) + 1 }}.</span>
-                <span v-if="a.kind === 'decision'" class="chip bg-amber-100 text-amber-700">Decision</span>
+                <span class="text-xs font-bold text-slate-500 w-6">{{ globalIndex(a.id) + 1 }}.</span>
+                <span v-if="a.kind === 'decision'" class="chip bg-gold-300 text-brand-900">Decision</span>
                 <input v-model="a.label" class="input" :placeholder="a.kind === 'decision' ? 'Question, e.g. Is the check clear?' : 'Activity, start with a verb'" :aria-label="`Label of step ${globalIndex(a.id) + 1}`">
-                <button class="btn btn-sm" :disabled="i === 0" title="Move up" aria-label="Move up" @click.stop="move(sec.id, i, -1)">↑</button>
-                <button class="btn btn-sm" :disabled="i === drafts[sec.id].length - 1" title="Move down" aria-label="Move down" @click.stop="move(sec.id, i, 1)">↓</button>
-                <button class="btn btn-sm btn-danger" title="Delete step" aria-label="Delete step" @click.stop="removeItem(sec.id, i)">×</button>
+                <button class="btn btn-sm" :disabled="i === 0" title="Move up" aria-label="Move up" @click.stop="move(sec.id, i, -1)"><Icon name="up" :size="14" /></button>
+                <button class="btn btn-sm" :disabled="i === drafts[sec.id].length - 1" title="Move down" aria-label="Move down" @click.stop="move(sec.id, i, 1)"><Icon name="down" :size="14" /></button>
+                <button class="btn btn-sm btn-danger" title="Delete step" aria-label="Delete step" @click.stop="removeItem(sec.id, i)"><Icon name="trash" :size="14" /></button>
               </div>
 
               <div class="grid grid-cols-2 gap-2 mb-2">
@@ -80,9 +80,9 @@
                 <div class="label">Tasks</div>
                 <div v-for="(t, ti) in a.tasks" :key="t.id" class="flex gap-2 mb-1">
                   <input v-model="t.text" class="input" placeholder="What is done" :aria-label="`Task ${ti + 1}`" @keydown.enter.prevent="addTask(a)">
-                  <button class="btn btn-sm" aria-label="Remove task" @click.stop="a.tasks.splice(ti, 1)">×</button>
+                  <button class="btn btn-sm" aria-label="Remove task" @click.stop="a.tasks.splice(ti, 1)"><Icon name="x" :size="14" /></button>
                 </div>
-                <button class="btn btn-sm mb-2" @click.stop="addTask(a)">+ Task</button>
+                <button class="btn btn-sm mb-2" @click.stop="addTask(a)"><Icon name="plus" :size="13" />Task</button>
                 <label class="label" :for="`nt-${a.id}`">Notes</label>
                 <textarea :id="`nt-${a.id}`" v-model="a.notes" class="input mb-2" rows="2" placeholder="Tips, rules, FAQs for the person doing this" />
                 <label class="label" :for="`nx-${a.id}`">After this step</label>
@@ -110,20 +110,20 @@
                   </div>
                 </div>
                               </template>
-              <div v-if="issues[a.id]" class="text-[11px] text-red-600 mt-2">{{ issues[a.id] }}</div>
+              <div v-if="issues[a.id]" class="text-xs text-red-600 mt-2">{{ issues[a.id] }}</div>
             </div>
             <div class="flex gap-2">
-              <button class="btn btn-sm" @click="addItem(sec.id, 'activity')">+ Activity</button>
-              <button class="btn btn-sm" @click="addItem(sec.id, 'decision')">+ Decision</button>
+              <button class="btn btn-sm" @click="addItem(sec.id, 'activity')"><Icon name="plus" :size="13" />Activity</button>
+              <button class="btn btn-sm" @click="addItem(sec.id, 'decision')"><Icon name="plus" :size="13" />Decision</button>
             </div>
           </template>
         </section>
       </div>
 
       <!-- Right panel -->
-      <div class="flex-1 min-w-0 flex flex-col">
-        <div class="flex gap-1 border-b border-slate-200 px-3 shrink-0">
-          <button v-for="t in PANEL_TABS" :key="t" class="px-3 py-2 text-sm bg-transparent border-0 border-b-2 cursor-pointer" :class="panelTab === t ? 'border-brand-600 text-brand-700 font-semibold' : 'border-transparent text-slate-500'" @click="panelTab = t">{{ t }}</button>
+      <div class="h-[75vh] lg:h-auto lg:flex-1 shrink-0 lg:shrink min-w-0 flex flex-col">
+        <div class="flex gap-1 border-b border-slate-300 px-3 shrink-0 overflow-x-auto">
+          <button v-for="t in PANEL_TABS" :key="t" class="px-3 py-2.5 text-sm bg-transparent border-0 border-b-4 cursor-pointer whitespace-nowrap" :class="panelTab === t ? 'border-brand-600 text-brand-700 font-semibold' : 'border-transparent text-slate-600 hover:text-brand-700'" @click="panelTab = t">{{ t }}</button>
           <div class="flex-1" />
           <span v-if="selectedItem" class="text-xs text-slate-500 self-center">Selected: {{ selectedItem.label || '(no label)' }} <button class="bg-transparent border-0 text-brand-700 cursor-pointer" @click="selectedId = null">clear</button></span>
         </div>
@@ -132,15 +132,15 @@
 
         <div v-if="panelTab === 'Comments'" class="flex-1 overflow-y-auto p-4">
           <form v-if="canComment" class="mb-3" @submit.prevent="postComment">
-            <div class="text-[11px] text-slate-500 mb-1">On: {{ selectedItem ? `the selected step (${selectedItem.label || 'no label'})` : 'the whole map' }}</div>
+            <div class="text-xs text-slate-500 mb-1">On: {{ selectedItem ? `the selected step (${selectedItem.label || 'no label'})` : 'the whole map' }}</div>
             <textarea v-model="commentBody" class="input mb-2" rows="2" placeholder="Write a comment…" required />
             <select v-if="canRevision" v-model="commentKind" class="input mb-2"><option value="COMMENT">Comment</option><option value="REVISION">Revision (blocks submit)</option></select>
-            <button class="btn btn-sm btn-primary">Post</button>
+            <button class="btn btn-sm btn-primary"><Icon name="send" :size="13" />Post</button>
           </form>
           <label class="flex items-center gap-2 text-xs mb-2"><input v-model="onlySelected" type="checkbox" :disabled="!selectedItem"> Only the selected step</label>
-          <p v-if="!shownComments.length" class="text-xs text-slate-400">No comments.</p>
-          <div v-for="c in shownComments" :key="c.id" class="border border-slate-200 rounded-lg p-2 mb-2 cursor-pointer" @click="c.activityId && select(c.activityId)">
-            <div class="text-[11px] text-slate-500"><strong>{{ c.authorName }}</strong> · {{ c.kind.toLowerCase() }} · <StatusChip :status="c.status" /></div>
+          <p v-if="!shownComments.length" class="text-xs text-slate-500">No comments.</p>
+          <div v-for="c in shownComments" :key="c.id" class="border border-slate-300 rounded p-2 mb-2 cursor-pointer" @click="c.activityId && select(c.activityId)">
+            <div class="text-xs text-slate-500"><strong>{{ c.authorName }}</strong> · {{ c.kind.toLowerCase() }} · <StatusChip :status="c.status" /></div>
             <div class="text-xs mt-1">{{ c.body }}</div>
             <button v-if="c.status === 'OPEN'" class="btn btn-sm mt-1" @click.stop="resolveComment(c)">Resolve</button>
           </div>
@@ -148,13 +148,13 @@
 
         <div v-if="panelTab === 'Documents'" class="flex-1 overflow-y-auto p-4">
           <form v-if="canAttach" class="mb-3" @submit.prevent="upload">
-            <div class="text-[11px] text-slate-500 mb-1">Attach to: {{ selectedItem ? 'the selected step' : 'the whole map' }}</div>
+            <div class="text-xs text-slate-500 mb-1">Attach to: {{ selectedItem ? 'the selected step' : 'the whole map' }}</div>
             <input ref="fileInput" type="file" class="input mb-2" required aria-label="File">
             <input v-model="docTitle" class="input mb-2" placeholder="Title (optional)">
-            <button class="btn btn-sm btn-primary">Upload</button>
+            <button class="btn btn-sm btn-primary"><Icon name="upload" :size="13" />Upload</button>
           </form>
-          <p v-if="!attachments.length" class="text-xs text-slate-400">No documents yet.</p>
-          <div v-for="a in attachments" :key="a.id" class="border border-slate-200 rounded-lg p-2 mb-2 text-xs">
+          <p v-if="!attachments.length" class="text-xs text-slate-500">No documents yet.</p>
+          <div v-for="a in attachments" :key="a.id" class="border border-slate-300 rounded p-2 mb-2 text-xs">
             <button class="bg-transparent border-0 p-0 text-brand-700 underline cursor-pointer text-xs" @click="download(a)">{{ a.attachTitle }}</button>
             <div class="text-slate-500">{{ a.category }} · {{ a.activityId ? 'step' : 'map' }} · {{ a.uploaderName }}</div>
           </div>
@@ -446,8 +446,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.card--sel { border-color: #6366f1; box-shadow: 0 0 0 2px #c7d2fe; }
-.ro-card { font-size: 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; margin-bottom: 4px; color: #475569; cursor: pointer; }
-.ro-card--sel { border-color: #6366f1; background: #eef2ff; }
-.input--warn { border-color: #f59e0b; background: #fffbeb; }
+.card--sel { border-color: #0067B1; box-shadow: 0 0 0 3px #FFD200; }
+.ro-card { font-size: 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 10px; margin-bottom: 4px; color: #334155; cursor: pointer; }
+.ro-card--sel { border-color: #0067B1; background: #EAF3FA; box-shadow: 0 0 0 2px #FFD200; }
+.input--warn { border-color: #CE9700; background: #FFF8D6; }
 </style>

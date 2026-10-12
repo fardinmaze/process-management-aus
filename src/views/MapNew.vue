@@ -1,6 +1,6 @@
 <template>
-  <div class="p-6 max-w-2xl">
-    <h1 class="text-xl font-bold mt-0 mb-4">Initiate a process map</h1>
+  <div class="p-4 sm:p-6 max-w-2xl">
+    <h1 class="text-xl font-bold mt-0 mb-4 flex items-center gap-2"><Icon name="plus" :size="22" />Initiate a process map</h1>
     <form class="card" @submit.prevent="create">
       <label class="label" for="t">Title</label>
       <input id="t" v-model="form.title" class="input mb-3" placeholder="e.g. New Employee Onboarding" required>

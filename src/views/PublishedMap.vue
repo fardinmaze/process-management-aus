@@ -1,19 +1,19 @@
 <template>
   <div class="flex flex-col bg-white" style="height: calc(100vh - 3.5rem)">
-    <div class="h-12 shrink-0 border-b border-slate-200 flex items-center gap-3 px-4 text-sm">
-      <router-link to="/published" class="btn btn-sm no-underline">Back</router-link>
-      <div class="font-semibold truncate">{{ map?.title }} <span class="text-slate-400 font-normal">v{{ map?.versionNo }}</span></div>
+    <div class="min-h-12 shrink-0 border-b border-slate-300 border-t-4 border-t-gold-500 flex flex-wrap items-center gap-x-3 gap-y-1 px-3 sm:px-4 py-1 text-sm">
+      <router-link to="/published" class="btn btn-sm no-underline"><Icon name="back" :size="14" />Back</router-link>
+      <div class="font-semibold truncate">{{ map?.title }} <span class="text-slate-500 font-normal">v{{ map?.versionNo }}</span></div>
       <span v-if="map" class="text-xs text-slate-500">{{ map.code }} · owner {{ map.ownerName }} · published {{ fmtDate(map.publishedAt) }}</span>
       <div class="flex-1" />
-      <button v-if="tab === 'Map'" class="btn btn-sm" :disabled="exporting" @click="exportFile('png')">Export PNG</button>
-      <button v-if="tab === 'Map'" class="btn btn-sm" :disabled="exporting" @click="exportFile('pdf')">Export PDF</button>
-      <button v-else class="btn btn-sm" @click="printProcedure">Print</button>
+      <button v-if="tab === 'Map'" class="btn btn-sm" :disabled="exporting" @click="exportFile('png')"><Icon name="download" :size="14" />Export PNG</button>
+      <button v-if="tab === 'Map'" class="btn btn-sm" :disabled="exporting" @click="exportFile('pdf')"><Icon name="download" :size="14" />Export PDF</button>
+      <button v-else class="btn btn-sm" @click="printProcedure"><Icon name="printer" :size="14" />Print</button>
     </div>
     <p v-if="error" class="p-6 text-red-600">{{ error }}</p>
-    <div v-else class="flex flex-1 min-h-0">
-      <div class="flex-1 min-w-0 flex flex-col">
-        <div class="flex gap-1 border-b border-slate-200 px-3 shrink-0" role="tablist">
-          <button v-for="t in ['Map', 'Procedure']" :key="t" role="tab" :aria-selected="tab === t" class="px-4 py-2 text-sm bg-transparent border-0 border-b-2 cursor-pointer" :class="tab === t ? 'border-brand-600 text-brand-700 font-semibold' : 'border-transparent text-slate-500'" @click="tab = t">{{ t }}</button>
+    <div v-else class="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
+      <div class="h-[75vh] lg:h-auto lg:flex-1 shrink-0 lg:shrink min-w-0 flex flex-col">
+        <div class="flex gap-1 border-b border-slate-300 px-3 shrink-0" role="tablist">
+          <button v-for="t in ['Map', 'Procedure']" :key="t" role="tab" :aria-selected="tab === t" class="inline-flex items-center px-4 py-2.5 text-sm bg-transparent border-0 border-b-4 cursor-pointer" :class="tab === t ? 'border-brand-600 text-brand-700 font-semibold' : 'border-transparent text-slate-600 hover:text-brand-700'" @click="tab = t"><Icon :name="t === 'Map' ? 'map' : 'list'" :size="15" class="mr-1.5" />{{ t }}</button>
         </div>
 
         <div v-show="tab === 'Map'" class="flex-1 min-h-0"><ProcessMap v-if="map" ref="mapRef" :items="items" :selected-id="selectedId" vf-id="viewer" @select="selectedId = $event" /></div>
@@ -23,12 +23,12 @@
             <p v-if="map.summary?.objective" class="mt-0 text-slate-700"><b>Objective:</b> {{ map.summary.objective }}</p>
             <div v-for="sec in map.snapshot.sections" :key="sec.id" class="mb-6">
               <h2 class="text-base font-bold mt-0 mb-2">{{ sec.title }}</h2>
-              <p v-if="!stepsOf(sec.id).length" class="text-sm text-slate-400">No steps.</p>
+              <p v-if="!stepsOf(sec.id).length" class="text-sm text-slate-500">No steps.</p>
               <ol class="pl-0 list-none m-0">
                 <li v-for="a in stepsOf(sec.id)" :id="`step-${a.id}`" :key="a.id" class="proc-step" :class="{ 'proc-step--sel': selectedId === a.id }" @click="selectedId = a.id">
                   <div class="flex items-baseline gap-2">
-                    <span class="text-xs font-bold text-slate-400 w-6 shrink-0">{{ indexOf(a.id) }}.</span>
-                    <span v-if="a.kind === 'decision'" class="chip bg-amber-100 text-amber-700">Decision</span>
+                    <span class="text-xs font-bold text-slate-500 w-6 shrink-0">{{ indexOf(a.id) }}.</span>
+                    <span v-if="a.kind === 'decision'" class="chip bg-gold-300 text-brand-900">Decision</span>
                     <span class="font-semibold">{{ a.label || '(no label)' }}</span>
                     <span class="text-xs text-slate-500">{{ a.roleName || 'No role' }}<span v-if="a.systemName"> · {{ a.systemName }}</span></span>
                   </div>
@@ -43,9 +43,9 @@
         </div>
       </div>
 
-      <aside class="w-80 shrink-0 border-l border-slate-200 overflow-y-auto p-4 text-sm">
+      <aside class="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-slate-300 lg:overflow-y-auto p-4 text-sm bg-[#F4F6F8]">
         <template v-if="sel">
-          <div class="text-[11px] uppercase font-bold text-slate-500 mb-1">{{ sel.kind }} · {{ sectionTitle(sel.sectionId) }}</div>
+          <div class="text-xs uppercase font-bold text-brand-900 mb-1">{{ sel.kind }} · {{ sectionTitle(sel.sectionId) }}</div>
           <h3 class="mt-0 mb-2">{{ sel.label || '(no label)' }}</h3>
           <dl class="m-0 text-xs">
             <template v-if="sel.roleName"><dt class="font-semibold text-slate-500">Responsible role</dt><dd class="m-0 mb-2">{{ sel.roleName }}</dd></template>
@@ -68,17 +68,17 @@
           </div>
         </template>
 
-        <form class="mt-6 pt-4 border-t border-slate-200" @submit.prevent="sendFeedback">
-          <h4 class="mt-0 mb-1">Send feedback</h4>
+        <form class="mt-6 pt-4 border-t border-slate-300" @submit.prevent="sendFeedback">
+          <h4 class="mt-0 mb-1 flex items-center gap-2"><Icon name="message" :size="16" />Send feedback</h4>
           <p class="text-xs text-slate-500 mt-0">{{ sel ? 'About the selected step.' : 'About this map.' }} The owner is notified.</p>
           <textarea v-model="feedback" class="input mb-2" rows="3" placeholder="What is unclear or wrong?" required />
           <label class="flex items-center gap-2 text-xs mb-2"><input v-model="needsReply" type="checkbox"> I need a response</label>
-          <button class="btn btn-primary btn-sm">Send feedback</button>
+          <button class="btn btn-primary btn-sm"><Icon name="send" :size="13" />Send feedback</button>
         </form>
 
-        <div v-if="mine.length" class="mt-6 pt-4 border-t border-slate-200">
+        <div v-if="mine.length" class="mt-6 pt-4 border-t border-slate-300">
           <h4 class="mt-0 mb-2">My feedback</h4>
-          <div v-for="f in mine" :key="f.id" class="border border-slate-200 rounded-lg p-2 mb-2 text-xs">
+          <div v-for="f in mine" :key="f.id" class="border border-slate-300 rounded p-2 mb-2 text-xs">
             <div class="text-slate-500">{{ f.activityId ? `On: ${labelOf(f.activityId)}` : 'On the map' }} · <span :class="f.status === 'RESOLVED' ? 'text-green-700' : 'text-amber-700'">{{ f.status === 'RESOLVED' ? 'Resolved' : 'Open' }}</span><span v-if="f.responseRequired"> · response requested</span></div>
             <div class="mt-1">{{ f.body }}</div>
             <div v-for="r in f.replies" :key="r.id" class="mt-1 pl-2 border-l-2 border-brand-200 text-slate-700"><b>{{ r.authorName }}:</b> {{ r.body }}</div>
@@ -172,7 +172,7 @@ async function exportFile(kind) {
 </script>
 
 <style scoped>
-.proc-step { padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 6px; cursor: pointer; background: #fff; }
-.proc-step--sel { border-color: #6366f1; background: #eef2ff; }
+.proc-step { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 6px; cursor: pointer; background: #fff; }
+.proc-step--sel { border-color: #0067B1; background: #EAF3FA; box-shadow: 0 0 0 2px #FFD200; }
 @media print { .proc-step { break-inside: avoid; } }
 </style>

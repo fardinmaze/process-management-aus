@@ -4,22 +4,23 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Poppins', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+        sans: ['"Segoe UI"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
       },
       colors: {
          brand: {
-            50:  '#E9EFFF',
-            100: '#CFD4FF',
-            200: '#B4B8FF',
-            300: '#9A9CFF',
-            400: '#8180F7',
-            500: '#6B61EF',
-            600: '#573FE0',
-            700: '#4010BD',
-            800: '#2D0095',
-            900: '#1C0069',
-            950: '#110044',
+            50:  '#EAF3FA',
+            100: '#D3E6F4',
+            200: '#A6CDE9',
+            300: '#78B3DD',
+            400: '#3F90CC',
+            500: '#0067B1',
+            600: '#0067B1',
+            700: '#00508C',
+            800: '#003A66',
+            900: '#0B2A4A',
+            950: '#071A2E',
           },
+          gold: { 100: '#FFF3B8', 300: '#FFE566', 500: '#FFD200', 600: '#E6BC00' },
 
           secondary: {
             50:  '#EBFFED',

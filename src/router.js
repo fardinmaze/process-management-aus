@@ -15,8 +15,8 @@ const routes = [
       { path: 'maps/:id/canvas', redirect: (to) => `/maps/${to.params.id}/edit` },
       { path: 'published', name: 'published', component: () => import('@/views/Published.vue') },
       { path: 'published/:id', name: 'published-map', component: () => import('@/views/PublishedMap.vue'), props: true },
-      { path: 'my-work', name: 'my-work', component: () => import('@/views/MyWork.vue'), meta: { roles: ['OWNER', 'CONTRIBUTOR'] } },
-      { path: 'todos', name: 'todos', component: () => import('@/views/Todos.vue'), meta: { roles: ['OWNER', 'CONTRIBUTOR'] } },
+      { path: 'my-work', redirect: '/dashboard' }, // merged into the dashboard
+      { path: 'todos', redirect: '/dashboard' },
       { path: 'reviews', name: 'reviews', component: () => import('@/views/Reviews.vue'), meta: { roles: ['APPROVER'] } },
       { path: 'admin/users', name: 'admin-users', component: () => import('@/views/admin/Users.vue'), meta: { roles: ['ADMIN'] } },
       { path: 'admin/invitations', name: 'admin-invitations', component: () => import('@/views/admin/Invitations.vue'), meta: { roles: ['ADMIN', 'OWNER'] } },

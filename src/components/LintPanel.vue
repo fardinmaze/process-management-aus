@@ -1,6 +1,6 @@
 <template>
   <div class="text-sm">
-    <div v-if="!lint" class="text-slate-400">Lint runs while the version is in progress.</div>
+    <div v-if="!lint" class="text-slate-500">Lint runs while the version is in progress.</div>
     <template v-else>
       <div v-if="!lint.blocking.length && !lint.warnings.length" class="text-green-700">No problems found.</div>
       <div v-if="lint.blocking.length" class="mb-2">

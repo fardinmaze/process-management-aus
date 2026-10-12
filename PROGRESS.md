@@ -109,6 +109,7 @@ Also needed before real backend work: location of the SMICEE Django repo, its da
 
 ## Change log
 
+- 2026-10-12: Polish pass. Demo-account panel hidden on login (show with `VITE_SHOW_DEMO_ACCOUNTS=true`). Inline outline icons (`src/components/Icon.vue`) in nav, headings and buttons. Dashboard, My work and To-do list merged into one `/dashboard` page (`/my-work`, `/todos` redirect). Sample data (3 maps, to-dos) built through the API in `src/mock/sample.js` on first load; tests and the e2e test start from the bare seed (`resetDemo({ bare: true })`).
 - 2026-10-11 (later): Fixed "My work is empty for contributors". The mock data is per browser profile, so a contributor opened in another profile or a private window saw an empty database. The signed-in user is now per tab (sessionStorage) while the data stays shared, and the mock re-reads the shared data on every call so two tabs never overwrite each other. Two tabs as owner and contributor verified in a headless browser. Also: My work button now says Open editor, and signing out no longer throws a console error.
 
 - 2026-10-11 (later): Connector routing. New `src/layout/route.js`; edges are drawn by a custom Vue Flow edge. No connector crosses a step box on the sample processes (`throughNodes` metric). Map opens at a readable zoom and pans to a step selected in the outline. Browser test 37 of 37.
