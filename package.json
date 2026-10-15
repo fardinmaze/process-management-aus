@@ -1,0 +1,29 @@
+{
+  "name": "process-maps",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node tests/acceptance.mjs"
+  },
+  "dependencies": {
+    "@dagrejs/dagre": "^3.1.1",
+    "@vue-flow/background": "^1.3.2",
+    "@vue-flow/controls": "^1.1.3",
+    "@vue-flow/core": "^1.48.2",
+    "html-to-image": "^1.11.13",
+    "jspdf": "^4.2.1",
+    "vue": "^3.4.27",
+    "vue-router": "^4.3.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.5",
+    "autoprefixer": "^10.5.2",
+    "postcss": "^8.5.16",
+    "tailwindcss": "^3.4.19",
+    "vite": "^5.2.13"
+  }
+}

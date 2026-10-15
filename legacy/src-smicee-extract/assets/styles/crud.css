@@ -1,0 +1,770 @@
+/* ── Design tokens ────────────────────────────────────────────────────────
+   Every bento surface (`.card`, badges, scope tags, metrics) reads its
+   colors from these variables instead of hardcoded hex, so a real
+   dark-mode theme is a one-block override here later, not a rewrite of
+   every component. Deliberately NOT wiring a `prefers-color-scheme`/
+   `data-theme` override yet — this app has zero existing dark-mode
+   surface anywhere (no `dark:` Tailwind usage, no `darkMode` config, no
+   sidebar/table/form dark styling), so flipping just these tokens would
+   make the dashboard go dark while every other page stayed light: a
+   worse, more inconsistent result than staying light everywhere until
+   dark mode is a deliberate, app-wide decision. Values below match the
+   colors already in use, so this refactor changes nothing visually. */
+:root {
+  --surface: #ffffff;
+  --surface-muted: #f9fafb;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --brand: #573fe0;
+  --brand-surface: #e9efff;
+  --success: #006b14;
+  --success-surface: #d9f2dc;
+  --warning: #92600a;
+  --warning-surface: #ffeec2;
+  --danger: #a61d24;
+  --danger-surface: #ffc2c0;
+}
+
+/* ── Page shell ──────────────────────────────────────────────────────────── */
+.page { @apply flex flex-col gap-5; }
+
+/* ── Bento grid (dashboard layout) ───────────────────────────────────────────
+   A 12-column grid — every section is a tile spanning N columns, sized to
+   its own content (no forced row height, no internal scrolling). Global
+   because it's meant to be reused by any "overview" page (Dashboard.vue
+   today; ManagementDashboard.vue is a natural future candidate), not just
+   redeclared per page.
+
+   `grid-auto-rows: min-content` sizes each row to its tallest tile rather
+   than a fixed height, and `align-items: stretch` then grows every other
+   tile sharing that row to match it — so a row of cards reads as one even
+   strip instead of a ragged skyline, with the row's own height still
+   driven purely by content (never clipped). Safe against a genuinely long
+   list blowing a row out, since that content gets its own bounded
+   `.scroll-list` (below) rather than growing the tile unbounded. Column
+   span still controls the one thing that should be deliberately
+   consistent: width.
+
+   Sizing is mobile-first: every tile is full-width until `sm`, so nothing
+   needs a size class to be usable — .bento-item--xs/sm/md/lg only kick in
+   once there's room for more than one column.
+
+   A bento tile is exactly one visual box — either a single `.card` with a
+   title, or (for a flat row of stats, e.g. Summary) several plain tiles
+   with no wrapping card at all. Never nest a boxed tile (`.card` or
+   `StatCard`) inside another `.card` — that's the "card within a card"
+   look; use `.metric-row`/`.metric` (below) for inline numbers that live
+   alongside other content in the same card instead. */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: min-content;
+  grid-auto-flow: dense;
+  gap: 20px;
+  align-items: stretch;
+}
+.bento-item { grid-column: span 12; display: flex; min-width: 0; }
+.bento-item > .card,
+.bento-item > .stat-card-slot {
+  width: 100%;
+}
+
+/* Bento-scoped card look (rounded-2xl + soft shadow) — scoped to `.bento-grid
+   .card` rather than redeclaring the global `.card` rule, since that base
+   class is shared by 200+ non-dashboard pages (invoice forms, every CRUD
+   list) that were never part of this redesign. */
+.bento-grid .card {
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* A section label that isn't its own boxed card — used above a flat row of
+   individually-tiled stats (Summary) instead of wrapping them all in one
+   outer card. */
+.bento-label {
+  display: flex; align-items: center;
+  font-size: 0.8125rem; font-weight: 600; color: var(--text-muted);
+  padding: 4px 2px;
+}
+
+/* ── Tile grid rhythm ─────────────────────────────────────────────────────
+   This is the dashboard's single committed mechanism for any *variable-
+   count* set of same-shaped tiles (OperationsInsights, HrOpsInsights,
+   SalesInsights, and cross-component pairings like ProjectInsights +
+   RecentProjects, plus the Summary/Pending Approvals rows in Dashboard.vue)
+   — used instead of more `.bento-item--*` CSS Grid items because V10 wraps
+   each Operations section in its own isolated nested grid, so a partial
+   last row can no longer rely on a neighboring section's tiles to backfill
+   it via grid-auto-flow:dense the way the old single flat grid could. A
+   flex-wrap row just leaves trailing whitespace on a partial last row
+   instead of an empty grid track — and, unlike a fixed-span grid, never
+   needs a tile count to be a whole multiple of anything to avoid a gap.
+
+   Exactly two widths are used dashboard-wide, chosen by content shape, not
+   per-section preference — the design-harmonization pass's answer to
+   "commit to one grid rhythm": .tile-flex-row (260px/500px-double) for
+   content-bearing cards (lists, charts, multi-line metrics), and
+   .tile-flex-row--tight (200px) for compact single-number stat tiles
+   (BentoTile/Summary). No other width is introduced anywhere on the
+   dashboard. */
+/* No max-width cap — flex-grow does the actual row-filling work: a lone
+   tile in its own row grows to fill it (100%) instead of sitting capped at
+   a fixed fraction with dead space beside it; 2-3 tiles sharing a row grow
+   evenly to split it. A hard max-width was tried first and is exactly
+   what caused a lone tile to render "narrow with a blank panel beside it"
+   instead of actually filling the row. */
+/* align-items: stretch (matches .bento-grid's own align-items: stretch) —
+   was flex-start, which let a short tile (e.g. Requisitions, one item) sit
+   at a fraction of its taller row-mates' height (Asset Allocations/Budget
+   Requests, a full list) and leave a ragged gap of bare background below
+   it. Stretching is safe here for the same reason it is on .bento-grid:
+   every list in this row is already capped by its own bounded
+   `.scroll-list`, so a row can never be dragged to an unbounded height —
+   a shorter tile just gains blank space at the bottom to match instead. */
+.tile-flex-row { display: flex; flex-wrap: wrap; align-items: stretch; gap: 20px; width: 100%; }
+.tile-flex-row > .bento-item--sm { grid-column: unset; flex: 1 1 260px; }
+.tile-flex-row > .bento-item--lg { grid-column: unset; flex: 2 1 500px; }
+@media (max-width: 639px) {
+  .tile-flex-row > .bento-item--sm,
+  .tile-flex-row > .bento-item--lg { flex-basis: 100%; }
+}
+/* BentoTile's own root carries Tailwind's literal col-span-N utility
+   classes directly (a different sizing system than .bento-item--*), so it
+   needs its own override here rather than reusing the rule above — same
+   specificity trick (a two-class child-combinator beats a Tailwind
+   utility's single-class selector regardless of source order). Used for
+   compact metric tiles (Summary) where a smaller flex-basis fits more per
+   row than the content-tile rule above. */
+.tile-flex-row--tight { gap: 16px; }
+.tile-flex-row--tight > .bento-tile { grid-column: unset; flex: 1 1 200px; }
+.tile-flex-row--tight > .bento-item--xs { grid-column: unset; flex: 1 1 200px; }
+@media (max-width: 479px) {
+  .tile-flex-row--tight > .bento-tile,
+  .tile-flex-row--tight > .bento-item--xs { flex-basis: 100%; }
+}
+
+/* Half width from `sm` up (tablet AND desktop) — unlike --md, which is
+   full width on tablets. For a pair that must stay side by side at every
+   width above mobile (Pending Approval + Tasks). */
+@media (min-width: 640px) {
+  .bento-item--half { grid-column: span 6; }
+}
+@media (min-width: 640px) {
+  .bento-item--xs   { grid-column: span 6; }
+  .bento-item--sm   { grid-column: span 6; }
+  .bento-item--md   { grid-column: span 12; }
+  .bento-item--lg   { grid-column: span 12; }
+  .bento-item--full { grid-column: span 12; }
+}
+@media (min-width: 1024px) {
+  .bento-item--xs   { grid-column: span 3; }
+  .bento-item--sm   { grid-column: span 4; }
+  .bento-item--md   { grid-column: span 6; }
+  .bento-item--lg   { grid-column: span 8; }
+  .bento-item--full { grid-column: span 12; }
+}
+
+/* ── Inline metrics (a number + label living inside another card) ──────────
+   Use these instead of stacking boxed StatCard tiles inside a themed card
+   — e.g. Attendance Today's present/absent counts, Finance Insights' cash
+   position figure. Reserve the actual boxed StatCard component for tiles
+   that are themselves a whole bento cell. */
+.metric-row { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 4px; }
+.metric { display: flex; flex-direction: column; }
+/* tabular-nums (V3): so a column of figures — Backlog Aging, Top
+   Requesters, any two-metric row — lines up digit-for-digit instead of
+   each number claiming a different width. */
+.metric__value { display: block; font-size: 1.5rem; font-weight: 700; line-height: 1.15; color: var(--text); font-variant-numeric: tabular-nums; }
+.metric__label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-muted); margin-top: 4px; }
+.metric__delta { display: block; font-size: 0.6875rem; font-weight: 600; margin-top: 2px; }
+.metric__delta--up { color: var(--success); }
+.metric__delta--down { color: var(--danger); }
+
+/* ── Shared bento sub-widgets (used across every *Insights component) ──────
+   Consistent header micro-layout: a small uppercase domain label, a hero
+   metric/chart, and a muted footnote — token-driven so every new module
+   (Inventory, Asset, Procurement, HR, CEO composites) looks like one
+   system rather than each hand-rolling its own aging-block/stale-block
+   variant, which is what earlier tiles did individually. */
+.bento-kicker {
+  font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--text-faint); margin: 0 0 4px;
+}
+.bento-block { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; background: var(--surface); }
+.bento-block__title { margin: 0 0 8px; font-size: 0.8125rem; font-weight: 600; color: var(--text); }
+.bento-block__footnote { font-size: 0.6875rem; color: var(--text-muted); margin: 8px 0 0; }
+.bento-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.bento-list li { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.8125rem; color: var(--text); }
+.bento-list a { color: var(--brand); text-decoration: none; }
+.bento-list a:hover { text-decoration: underline; }
+
+/* Signed-value color convention, shared across every module that shows a
+   margin/variance/delta figure (Project Direct Margin, Requisition
+   settlement variance, CEO Headcount-vs-Revenue) — one rule instead of
+   each component re-deciding which shade of green/red to use. */
+.value-positive { color: var(--success); font-weight: 600; }
+.value-negative { color: var(--danger); font-weight: 600; }
+
+/* A specific long list *inside* an otherwise fixed-height tile — the tile
+   itself never scrolls (see .bento-grid above), but a genuinely long list
+   within it (Payroll's stuck sheets, the Approvals queue, Project Budget
+   Burn) gets its own bounded, scrollable region so it doesn't push the
+   whole card to an unbounded height. */
+.scroll-list { max-height: 260px; overflow-y: auto; padding-right: 10px; }
+.scroll-list--short { max-height: 110px; }
+/* A fixed (not max-) height — for a list tile that pairs with another
+   list tile in the same row (e.g. "Waiting on You" + "Recent Activity")
+   and needs to actually match its row-mate's height regardless of which
+   one has more items, rather than each just shrinking to its own content
+   and leaving the row-stretch to paper over the gap. */
+.scroll-list--fixed { height: 260px; overflow-y: auto; padding-right: 10px; }
+
+/* Dashboard list card (Figma: Smicee › "Waiting on You", node 915:16404) —
+   shared by Pending Approval and Recent Activity so the paired cards match.
+   The list is exactly five rows tall (row = 12px × 1.5 line-height + 16px
+   padding = 34px; 5 × 34 + 4 × 8px gap = 202px) and scrolls past that. */
+.list-card {
+  background: #fff; border: 1px solid #DCDCDC; border-radius: 12px;
+  padding: 24px 32px 24px 24px; display: flex; flex-direction: column; gap: 20px;
+  width: 100%; min-width: 0;
+}
+.list-card__head { display: flex; flex-direction: column; gap: 12px; }
+.list-card__title {
+ @apply text-base font-bold text-slate-800 m-0;
+}
+.list-card__divider { border: 0; border-top: 1px solid #DCDCDC; margin: 0; width: 100%; }
+.list-card__list {
+  list-style: none; margin: 0 -16px 0 0; padding: 0 14px 0 0;
+  display: flex; flex-direction: column; gap: 8px;
+  height: 202px; overflow-y: auto;
+}
+/* Chrome 121+ switches to its native scrollbar (with up/down arrow
+   buttons) as soon as the standard scrollbar-width/-color are set, and
+   then ignores ::-webkit-scrollbar — so the standard properties are only
+   applied where ::-webkit-scrollbar isn't supported (Firefox). */
+/* Shared by every scrollable list inside a dashboard card (.list-card__list
+   the .scroll-list family above, and any other in-card scroller tagged
+   .card-scroll), so they all get the same Figma
+   scrollbar: 2px brand thumb on a typo-100 track, no arrow buttons. */
+.list-card__list::-webkit-scrollbar,
+.scroll-list::-webkit-scrollbar,
+.scroll-list--fixed::-webkit-scrollbar,
+.card-scroll::-webkit-scrollbar { width: 2px; }
+.list-card__list::-webkit-scrollbar-track,
+.scroll-list::-webkit-scrollbar-track,
+.scroll-list--fixed::-webkit-scrollbar-track,
+.card-scroll::-webkit-scrollbar-track { background: #DCDCDC; }
+.list-card__list::-webkit-scrollbar-thumb,
+.scroll-list::-webkit-scrollbar-thumb,
+.scroll-list--fixed::-webkit-scrollbar-thumb,
+.card-scroll::-webkit-scrollbar-thumb { background: #573FE0; border-radius: 0; }
+.list-card__list::-webkit-scrollbar-button,
+.scroll-list::-webkit-scrollbar-button,
+.scroll-list--fixed::-webkit-scrollbar-button,
+.card-scroll::-webkit-scrollbar-button { display: none; height: 0; }
+@supports not selector(::-webkit-scrollbar) {
+  .list-card__list, .scroll-list, .scroll-list--fixed, .card-scroll { scrollbar-width: thin; scrollbar-color: #573FE0 #DCDCDC; }
+}
+.list-card__row {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  padding: 8px 0; font-size: 12px; line-height: 1.5; color: #121212;
+}
+.list-card__text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-card__muted { color: #6E6E6F; }
+.list-card__empty { height: 202px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; }
+
+.page-header { @apply bg-white border border-slate-200 rounded-xl overflow-hidden flex items-center justify-between flex-wrap gap-3 px-5 py-4; }
+.page-header__actions { @apply flex gap-2 flex-wrap; }
+.page-title    { @apply text-[20px] lg:text-[24px] font-bold text-slate-800 m-0; }
+.page-subtitle { @apply text-[12px] lg:text-[14px] text-slate-500 m-0 mt-1; }
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.card { @apply bg-white border border-slate-200 rounded-xl overflow-hidden; }
+.card__header { @apply flex items-center justify-between px-5 py-4 border-b border-slate-100; }
+.card__title  { @apply text-base font-bold text-slate-800 m-0; }
+.card__title-hint { @apply text-xs font-normal text-slate-400 ml-1.5; }
+
+/* ── Sidebar title for all side drawers ─────────────────────────────────────────────────────────────── */
+.sidebar__title { @apply text-[20px] font-[500] text-[#573FE0] m-0; }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn--submit { background: #008610; color: #F9F9F9; }
+.btn--submit:hover:not(:disabled) { background: #006500; }
+
+.btn {
+  @apply inline-flex items-center gap-3 px-4 py-2 rounded-[6px]
+  border cursor-pointer no-underline transition-colors whitespace-nowrap text-[12px] font-semibold;
+}
+.btn--primary { @apply bg-brand-600 border-brand-600 hover:bg-brand-800 hover:border-brand-800 text-white; }
+.btn--secondary { @apply bg-brand-50 border-brand-100 hover:bg-brand-200 hover:border-brand-200 text-brand-600 hover:text-brand-700 ; }
+.btn--success { @apply bg-[#D9F2DC] border-[#D9F2DC] text-secondary-700 hover:border-secondary-200; }
+.btn--danger  { @apply bg-accent-50 border-accent-50 text-accent-600 hover:border-accent-200; }
+.btn--warning { @apply bg-warning-200 text-warning-700 border-warning-200 hover:border-warning-300; }
+.btn--disabled { @apply bg-typo-100 border-typo-100 text-typo-500 cursor-not-allowed; }
+
+.btn--ghost   { @apply bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200; }
+.btn--sm      { @apply px-3 py-1.5 text-xs; }
+.btn--filter{ @apply bg-brand-50 border-brand-100 hover:bg-brand-200 hover:border-brand-200 text-brand-600 hover:text-brand-800 ; }
+
+/* ── Search box + action button ──────────────────────────────────────────── */
+.search-box-group { @apply flex flex-wrap items-center gap-2.5 flex-1 min-w-[240px]; }
+.search-box-group .search-box { @apply max-w-[260px]; }
+
+/* ── Icon buttons ────────────────────────────────────────────────────────── */
+.icon-btn {
+  @apply w-[34px] h-[34px] px-2 py-2 rounded-[6px] inline-flex items-center justify-center
+  border cursor-pointer no-underline transition-all;
+}
+.icon-btn--primary { @apply bg-brand-50 text-brand-600; }
+.icon-btn--info    { @apply bg-[#cdebffde] text-[#0099ff]; }
+.icon-btn--warning { @apply bg-amber-50 text-amber-600; }
+.icon-btn--danger  { @apply bg-accent-50 text-accent-600; }
+.icon-btn--success { @apply bg-secondary-50 text-secondary-700; }
+
+.icon-btn--check{
+  @apply bg-brand-50 hover:bg-brand-100 border-brand-100 stroke-brand-100;
+  background-image: url('/icons/check.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+}
+
+.icon-btn--edit{
+  @apply bg-brand-50 hover:bg-brand-100 border-brand-100 stroke-brand-100;
+  background-image: url('/icons/edit.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+}
+
+.icon-btn--view{ @apply bg-[#D5E9FB] border-[#B0D3F4] hover:bg-[#B0D3F4];
+  background-image: url('/icons/view.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 9px 9px;
+}
+.icon-btn--delete {
+  @apply bg-[#FFDEDC] border-[#FFC2C0] hover:bg-[#FFC2C0];
+  background-image: url('/icons/delete.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 18px 18px;
+}
+.icon-btn--chat{
+  @apply bg-secondary-50 border-secondary-100 hover:bg-secondary-100;
+  background-image: url('/icons/chat.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px 16px;
+}
+
+.icon-btn--assign{
+  @apply bg-secondary-600 border-secondary-100 hover:bg-secondary-500;
+  background-image: url('/icons/plus.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+}
+
+.action-btns { @apply flex gap-1.5; }
+
+/* Keeps an icon-btn visible (rather than removed via v-if) when its action
+   isn't currently allowed — greyed out, unclickable, no hover feedback. */
+.icon-btn--disabled {
+  @apply opacity-40 pointer-events-none hover:bg-none cursor-not-allowed;
+}
+
+/* ── Filters ─────────────────────────────────────────────────────────────── */
+.filters { @apply p-3.5 px-4; }
+.filters__row { @apply flex gap-2.5 flex-wrap items-center border-b border-typo-100 pb-3; }
+.filters__row_open { @apply flex gap-2.5 flex-wrap items-center pt-3; }
+.search-box {
+  @apply flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg
+         px-3 h-10 py-1.5 flex-1 min-w-[200px] max-w-[340px];
+}
+.search-box i { @apply text-slate-400 flex-shrink-0; }
+.search-box input {
+  @apply border-none bg-transparent outline-none flex-1 text-sm text-slate-800 min-w-0;
+}
+.search-box__clear {
+  @apply bg-transparent border-none text-slate-400 cursor-pointer p-0 text-base flex;
+}
+
+/* "Approved by" pill — same shape/colors as requisitionTable.vue's .ack-pill. */
+.ack-pill-list { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.ack-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #F9F9F9; border: 1px solid #DCDCDC; border-radius: 36px; padding: 6px;
+  max-width: fit-content;
+}
+.ack-pill__avatar {
+  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: #573FE0; color: #fff; font-size: 10px; font-weight: 700;
+}
+.ack-pill__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ack-pill__name { font-size: 11px; line-height: 1.5; color: #3D3D3E; white-space: nowrap; font-weight: 500; }
+
+/* ── Form selects ────────────────────────────────────────────────────────── */
+.form-select {
+  @apply h-10 px-3 border border-slate-200 rounded-lg bg-slate-50 text-sm text-slate-700
+         outline-none cursor-pointer appearance-none focus:border-brand-600 focus:bg-white
+         box-border;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%2394a3b8' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 32px;
+}
+.form-select--sm { @apply h-[34px] text-xs; }
+
+/* ── Table ───────────────────────────────────────────────────────────────── */
+/* border-collapse: separate (not collapse) because border-radius on th/td
+   is undefined/ignored under the collapsing border model — separate is what
+   lets the corner cells below actually round. Cells only draw right+bottom
+   borders (with left/top added on the first column/row) so the grid still
+   reads as single-width lines instead of doubling at every seam. */
+.table-wrap { @apply overflow-x-auto rounded; }
+.table      { @apply w-full text-sm; border-collapse: separate; border-spacing: 0; }
+.table th {
+  @apply px-3 py-2.5 text-left text-[12px] font-semibold text-brand-600
+         bg-[#F9F9F9] border-t border-r border-b border-brand-200 whitespace-nowrap select-none;
+}
+.table th:first-child { @apply border-l border-brand-200; }
+.table th.sortable { @apply cursor-pointer hover:text-brand-700; }
+.table td  { @apply px-3 py-2.5 border-r border-b border-typo-100 text-[12px] text-typo-700 align-middle; }
+.table td:first-child { @apply border-l border-typo-100; }
+.table thead th:first-child { border-top-left-radius: 4px; }
+.table thead th:last-child  { border-top-right-radius: 4px; }
+.table tbody tr:last-child td:first-child { border-bottom-left-radius: 4px; }
+.table tbody tr:last-child td:last-child  { border-bottom-right-radius: 4px; }
+/* .table tbody tr:nth-child(even) td { background: #F9F9F9; } */
+.table tbody tr:hover td { background: #F9F9F9; }
+.table tr.row--selected td { @apply bg-brand-50/60; }
+.table-status{ @apply flex items-center justify-center w-full text-center min-w-[120px]}
+.text-muted { @apply text-slate-500; }
+.text-sm    { @apply text-xs; }
+
+
+/* ── User cell ───────────────────────────────────────────────────────────── */
+.user-cell { @apply flex items-center gap-2.5; }
+.user-cell__avatar {
+  @apply w-[34px] h-[34px] rounded-full text-white text-xs font-bold
+         flex items-center justify-center overflow-hidden flex-shrink-0;
+}
+.user-cell__avatar img { @apply w-full h-full object-cover; }
+.user-cell__name  { @apply font-medium text-typo-800 text-sm m-0; }
+.user-cell__meta  { @apply text-[10px] text-typo-500 m-0 mt-0.5; }
+
+/* ── Avatar stack (overlapping avatars + "+N" overflow, e.g. table cells
+   listing everyone an item was referred/assigned to) ───────────────────────── */
+.avatar-stack { @apply flex items-center; }
+.avatar-stack__item {
+  @apply w-7 h-7 rounded-full text-white text-[10px] font-bold
+         flex items-center justify-center overflow-hidden flex-shrink-0
+         border-2 border-white -ml-2 first:ml-0;
+  background: #573FE0;
+}
+.avatar-stack__item img { @apply w-full h-full object-cover; }
+.avatar-stack__more {
+  @apply w-7 h-7 rounded-full text-typo-700 text-[10px] font-bold
+         flex items-center justify-center flex-shrink-0
+         border-2 border-white bg-typo-200 -ml-2;
+}
+
+/* ── Clickable row title (links a list title to its detail page) ──────────── */
+.title-link { @apply text-[12px] leading-snug block text-slate-600 font-semibold; display: block; cursor: pointer; text-decoration: none; }
+.title-link:hover { color: #006500 !important; text-decoration: none; }
+
+/* ── Text ──────────────────────────────────────────────────────────────── */
+.text--success { color: #006B14; font-weight: 600; font-size: 12px;}
+.text--warning { color: #c9ab06; font-weight: 600; font-size: 12px;}
+.text--danger  { color: #A61D24; font-weight: 600; font-size: 12px;}
+.text--info    { color: #005A9C; font-weight: 600; font-size: 12px;}
+.text--role    { color: #4B53A8; font-weight: 600; font-size: 12px;}
+.text--default { @apply text-typo-700; font-weight: 600; font-size: 12px;}
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+.badge { @apply inline-flex items-center px-3 py-1 rounded text-[10px] font-medium text-typo-700 whitespace-nowrap; }
+.badge--success { background: #D9F2DC; }
+.badge--warning { background: #FFF887; }
+.badge--danger  { background: #FFC2C0; }
+.badge--info    { background: #CDEBFF; }
+.badge--role    { background: #CFD4FF; }
+.badge--default { @apply bg-typo-100; }
+
+/* ── Status pill ─────────────────────────────────────────────────────────── */
+/* Solid-fill status pill — same shape as ProjectList.vue's (and 4 other
+   project-family pages') identically-duplicated scoped `.status-pill`
+   rule, promoted to global here since nothing in this codebase shared it
+   before. Pair with a status -> `bg-*`/`text-white` (or similar solid)
+   Tailwind class per entity, the same way each of those pages' own
+   PROJECT_STATUS_STYLES map does — this class only supplies the pill
+   shape, not any color. */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 32px;
+  padding: 6px 12px;
+  border-radius: 36px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Stat grid (StatCard tile layout) ───────────────────────────────────────
+   Global — shared by every dashboard section (Dashboard.vue,
+   ManagementDashboard.vue, and the FinanceInsights/RequisitionInsights/
+   BillInsights/ProjectInsights/PayrollInsights/HrInsights components)
+   instead of each one redeclaring its own scoped copy, which is what
+   originally left it only reachable from Dashboard.vue itself (Vue
+   `scoped` styles never reach into child component templates). */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+/* ── Bulk bar ────────────────────────────────────────────────────────────── */
+.bulk-bar {
+  @apply flex items-center gap-3 px-4 py-2.5 bg-brand-50 border-b border-brand-200
+         text-sm font-semibold text-brand-800;
+}
+
+/* ── Pagination ──────────────────────────────────────────────────────────── */
+.pagination {
+  @apply flex items-center justify-between flex-wrap gap-2.5 px-4 py-3.5 ;
+}
+.pagination__info     { @apply text-xs text-typo-500; }
+.pagination__controls { @apply flex gap-1 flex-wrap; }
+.page-btn {
+  @apply min-w-[34px] h-[34px] border border-typo-100 rounded-lg bg-white text-[0.85rem]
+         text-typo-600 cursor-pointer transition-colors inline-flex items-center justify-center
+         px-2 hover:bg-typo-50 disabled:opacity-40 disabled:cursor-not-allowed;
+}
+.page-btn--active   { @apply bg-brand-600 text-white border-brand-600; }
+.page-btn--ellipsis { @apply cursor-default; }
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.empty-state { @apply py-16 px-6 text-center text-slate-400; }
+.empty-state i  { @apply text-5xl mb-4 block; }
+.empty-state h3 { @apply text-lg text-slate-800 m-0 mb-2; }
+.empty-state p  { @apply m-0 mb-5 text-sm; }
+
+/* Same icon-forward, muted-message shape as .empty-state above, scaled down
+   for a single bento card's "0 records" line (a bare <p> read as an
+   unstyled afterthought; .empty-state's own py-16/text-5xl icon is sized
+   for a whole empty list page and would look oversized inside a compact
+   tile) — design-harmonization pass, priority 6. */
+.tile-empty { @apply flex flex-col items-center justify-center text-center py-6 px-2 gap-1 text-slate-400; }
+.tile-empty i { @apply text-2xl block; }
+.tile-empty p { @apply m-0 text-sm; }
+
+
+/* Transaction Amount Show */
+.total-bill{
+    @apply bg-brand-50 text-brand-800 font-medium flex justify-between px-3 py-1;
+}
+.paid-bill{
+    @apply bg-secondary-50 text-secondary-600 font-medium flex justify-between px-3 py-1;
+}
+.due-bill{
+    @apply bg-accent-50 text-accent-600 font-medium flex justify-between px-3 py-1;
+}
+.return-bill{
+    @apply bg-warning-50 text-warning-700 font-medium flex justify-between px-3 py-1;
+}
+
+/* ── Skeleton ────────────────────────────────────────────────────────────── */
+.skeleton--row { @apply h-11; }
+
+/* ── Form layout ─────────────────────────────────────────────────────────── */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  @apply gap-4 items-start;
+}
+.form-side { @apply flex flex-col gap-4; }
+
+.form-card { @apply bg-white border border-slate-200 rounded-xl p-5; }
+.form-card__title {
+  @apply text-base font-bold text-slate-800 m-0 mb-4 pb-3.5
+         border-b border-slate-100 flex items-center gap-1.5;
+}
+.form-card__title-hint { @apply text-xs font-normal text-slate-400; }
+
+.form-row   { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); @apply gap-3; }
+.form-group { @apply flex flex-col gap-1.5 mb-3.5; }
+.form-label { @apply text-[0.8rem] font-semibold text-slate-600; }
+.required   { @apply text-red-500; }
+
+.form-input {
+  @apply h-10 px-3 border border-slate-200 rounded-lg text-sm text-slate-800
+         bg-slate-50 outline-none transition-colors w-full box-border
+         focus:border-brand-600 focus:bg-white;
+}
+.form-input--error { @apply border-red-400; }
+textarea.form-input { height: auto; @apply py-2.5 resize-y; }
+.form-error { @apply text-xs text-red-500 mt-0.5; }
+
+/* Browsers dim disabled fields inconsistently (varies by OS/browser, often
+   to the point of being unreadable) — define it explicitly instead: still
+   visibly non-editable (flat grey background, no focus ring), but the text
+   itself stays legible. */
+.form-input:disabled, .form-select:disabled {
+  @apply bg-slate-100 text-slate-600 cursor-default opacity-100;
+}
+
+/* Password eye toggle */
+.input-eye { @apply relative; }
+.input-eye .form-input { @apply pr-10; }
+.input-eye__toggle {
+  @apply absolute right-2.5 top-1/2 -translate-y-1/2 bg-transparent border-none
+         text-slate-400 cursor-pointer text-base p-0 flex hover:text-brand-600;
+}
+
+/* Avatar upload */
+.avatar-upload { @apply flex flex-col items-center gap-2.5 cursor-pointer py-4; }
+.avatar-upload__preview {
+  @apply w-[100px] h-[100px] rounded-full overflow-hidden border-2 border-dashed
+         border-slate-200 transition-colors;
+}
+.avatar-upload:hover .avatar-upload__preview { @apply border-brand-600; }
+.avatar-upload__preview img { @apply w-full h-full object-cover; }
+.avatar-upload__placeholder {
+  @apply w-full h-full flex items-center justify-center bg-slate-100 text-slate-400 text-4xl;
+}
+.avatar-upload__hint { @apply text-xs text-slate-400 text-center; }
+
+/* Signature upload (rectangular variant of avatar upload) */
+.signature-upload { @apply flex flex-col items-center gap-2.5 cursor-pointer py-1; }
+.signature-upload__preview {
+  @apply w-[160px] h-[70px] rounded-lg overflow-hidden border-2 border-dashed
+         border-slate-200 transition-colors bg-white;
+}
+.signature-upload:hover .signature-upload__preview { @apply border-brand-600; }
+.signature-upload__preview img { @apply w-full h-full object-contain; }
+.signature-upload__placeholder { @apply text-xs; }
+
+/* Form actions */
+.form-actions { @apply flex justify-end gap-2.5; }
+
+/* Page loader ──────────────────────────────────────────────────────────────
+   Loader "scene" built entirely from the class — components only need
+   `<div class="page-loader …">Loading…</div>`. The spinning ring is drawn
+   with ::before so the element's own text stays as the caption underneath. */
+.page-loader {
+  @apply flex flex-col items-center justify-center gap-3 p-8 min-h-[160px]
+         text-sm font-medium text-slate-400 text-center select-none;
+}
+.page-loader::before {
+  content: "";
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2D5A27;
+  animation: spin-icon 0.7s linear infinite;
+}
+.page-loader::after {
+  content: "";
+  width: 60px;
+  height: 6px;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse at center, rgba(45, 90, 39, 0.18), transparent 70%);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-loader::before,
+  .page-loader::after { animation-duration: 0s; }
+}
+
+/* Alerts (used in Profile / Settings) */
+.alert {
+  @apply flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-sm mb-4;
+}
+.alert--success { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
+.alert--danger  { @apply bg-red-50 text-red-600 border border-red-200; }
+.alert--warning { @apply bg-amber-50 text-amber-700 border border-amber-200; }
+
+
+
+
+/* Sticky side column (photo/status/actions): pins in place at top while
+   the taller left form column scrolls the page underneath it. Only
+   active once the two-column grid is (matches the breakpoint below). */
+@media (min-width: 1025px) {
+  .form-side {
+    position: sticky;
+    top: 88px;
+  }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .form-side { order: 1; }
+}
+@media (max-width: 600px) {
+  .form-row { grid-template-columns: 1fr; }
+}
+
+/* Filters on mobile/tablet: stack full-width instead of shrinking each
+   control to its own content width and centering it (the old `flex-col`
+   override kept `items-center` from the desktop row layout, which is what
+   made every field a different, oddly-centered width). */
+@media (max-width: 768px) {
+  .filters { padding: 14px; }
+  .filters__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .filters__row > * { width: 100%; }
+  .search-box { max-width: 100%; }
+  .filters__row .btn { justify-content: center; }
+}
+
+/* "More filters" mobile collapse: the primary field (search box, or a
+   preset selector on pages without search) stays visible; everything
+   else tucks behind a toggle so the filter card doesn't dominate the
+   screen with a long vertical stack. `.filters__extra` is `display:
+   contents` on desktop so its children behave as plain direct children
+   of `.filters__row` — no layout difference from before this existed. */
+.filters__toggle { display: none; }
+.filters__extra  { display: contents; }
+@media (max-width: 768px) {
+  .filters__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .filters__extra {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .filters__extra--open { display: flex; }
+}
+
+/* ── Rich text (CKEditor / BallonEditor output) ─────────────────────────────
+   Global, not scoped, so no :deep() is needed — apply `.rich-text` to any
+   v-html'd editor output (EOD reports, requisition notes, etc.) to render
+   it consistently with how BallonEditor.vue styles it while editing. */
+.rich-text { word-wrap: break-word; }
+.rich-text p  { margin: 0 0 8px; }
+.rich-text ul { list-style: disc; margin: 0 0 8px; padding-left: 20px; }
+.rich-text ol { list-style: decimal; margin: 0 0 8px; padding-left: 20px; }
+.rich-text li { margin: 0 0 4px; }
+.rich-text h2 { font-size: 20px; font-weight: 700; color: #272727; margin: 0.6em 0 0.3em; }
+.rich-text h3 { font-size: 17px; font-weight: 600; color: #272727; margin: 0.5em 0 0.25em; }
+.rich-text h4 { font-size: 15px; font-weight: 600; color: #272727; margin: 0.4em 0 0.2em; }
